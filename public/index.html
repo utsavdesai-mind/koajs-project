@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KoaJS Auth System</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Auth Section -->
+        <div id="auth-section" class="card fade-in">
+            <h1 id="auth-title">Welcome Back</h1>
+            <p id="auth-subtitle">Please login to continue</p>
+
+            <form id="auth-form">
+                <div class="input-group" id="name-group" style="display: none;">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" placeholder="John Doe">
+                </div>
+
+                <div class="input-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" required placeholder="name@company.com">
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="••••••••">
+                </div>
+
+                <div class="input-group" id="age-group" style="display: none;">
+                    <label for="age">Age</label>
+                    <input type="number" id="age" placeholder="25">
+                </div>
+
+                <button type="submit" id="auth-btn" class="btn-primary">Login</button>
+            </form>
+
+            <div class="auth-footer">
+                <span id="toggle-text">Don't have an account?</span>
+                <a href="#" id="toggle-auth">Sign Up</a>
+            </div>
+        </div>
+
+        <!-- Profile Section -->
+        <div id="profile-section" class="card fade-in" style="display: none;">
+            <div class="profile-header">
+                <h1>User Profile</h1>
+                <button id="logout-btn" class="btn-outline">Logout</button>
+            </div>
+
+            <div class="profile-avatar-container">
+                <div class="avatar-wrapper">
+                    <img id="profile-img-preview" src="/person.jpg" alt="Profile Picture">
+                    <div class="avatar-overlay" id="change-pic-btn">
+                        <span>Change</span>
+                    </div>
+                </div>
+                <button id="delete-pic-btn" class="delete-avatar-btn" title="Delete Profile Picture">×</button>
+                <input type="file" id="profile-pic-input" style="display: none;" accept="image/*">
+                <p class="avatar-hint">Click to change picture</p>
+            </div>
+
+            <div class="profile-info">
+                <div class="info-item">
+                    <span class="label">Name</span>
+                    <input type="text" id="profile-name" class="editable-input">
+                </div>
+                <div class="info-item">
+                    <span class="label">Email</span>
+                    <input type="email" id="profile-email" class="editable-input" disabled>
+                </div>
+                <div class="info-item">
+                    <span class="label">Age</span>
+                    <input type="number" id="profile-age" class="editable-input">
+                </div>
+                <div class="info-item">
+                    <span class="label">New Password (leave blank to keep current)</span>
+                    <input type="password" id="profile-password" class="editable-input" placeholder="••••••••">
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button id="update-btn" class="btn-primary">Update Profile</button>
+                <button id="delete-btn" class="btn-danger">Delete Account</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
