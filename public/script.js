@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const API_VERSION = 'v2';
+    const API_BASE_URL = `/api/${API_VERSION}`;
+
     const authSection = document.getElementById('auth-section');
     const profileSection = document.getElementById('profile-section');
     const authForm = document.getElementById('auth-form');
@@ -30,6 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
         age: '',
         password: ''
     };
+
+    const getAuthToken = (data = {}) => data.token || data.accessToken || null;
+    const getUserPayload = (data = {}) => data.user || data;
+    const getProfileImagePath = (data = {}) =>
+        data.profilePicture || data.image?.path || '';
 
     // Initial State Check
     if (token) {
@@ -69,7 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = document.getElementById('name').value;
         const age = document.getElementById('age').value;
 
-        const endpoint = isLogin ? '/auth/login' : '/auth/register';
+        const endpoint = isLogin
+            ? `${API_BASE_URL}/auth/login`
+            : `${API_BASE_URL}/auth/register`;
         const payload = isLogin ? { email, password } : { name, email, password, age: parseInt(age) };
 
         try {
@@ -86,11 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast(isLogin ? 'Login Successful' : 'Registration Successful');
 
             if (isLogin) {
-                token = responseBody.data.token;
-                currentUser = responseBody.data.user;
+                token = getAuthToken(responseBody.data);
+                currentUser = getUserPayload(responseBody.data);
                 localStorage.setItem('token', token);
                 localStorage.setItem('userId', currentUser.id);
-                showProfile(responseBody.data.user);
+                showProfile(currentUser);
             } else {
                 // After signup, switch to login
                 toggleAuth.click();
@@ -113,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const res = await fetch(`/users/${userId}`, {
+            const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -159,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const userId = localStorage.getItem('userId');
         try {
-            const res = await fetch(`/users/${userId}`, {
+            const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -185,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('image', file);
 
         try {
-            const res = await fetch('/users/upload-profile', {
+            const res = await fetch(`${API_BASE_URL}/users/upload-profile`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -197,8 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error(responseBody.message || 'Upload failed');
 
             showToast('Profile picture updated');
-            // Update preview
-            profileImgPreview.src = `/${responseBody.data.profilePicture}`;
+            const profilePicture = getProfileImagePath(responseBody.data);
+            profileImgPreview.src = profilePicture ? `/${profilePicture}` : '/person.jpg';
             deletePicBtn.style.display = 'flex';
         } catch (err) {
             showToast(err.message, true);
@@ -210,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('Are you sure you want to delete your profile picture?')) return;
 
         try {
-            const res = await fetch('/users/profile/image', {
+            const res = await fetch(`${API_BASE_URL}/users/profile/image`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -269,13 +279,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!userId) return;
 
         try {
-            const res = await fetch(`/users/${userId}`, {
+            const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const responseBody = await res.json();
 
             if (res.ok) {
-                showProfile(responseBody.data);
+                showProfile(getUserPayload(responseBody.data));
             } else {
                 logout();
             }

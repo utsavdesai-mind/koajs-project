@@ -3,8 +3,7 @@ const bodyParser = require("koa-bodyparser");
 const serve = require("koa-static");
 const mount = require("koa-mount");
 const path = require("path");
-const userRoutes = require("./src/routes/userRoutes");
-const authRoutes = require("./src/routes/authRoutes");
+const apiRoutes = require("./src/routes/apiRoutes");
 const connectDB = require("./src/config/db");
 
 const app = new Koa();
@@ -34,10 +33,8 @@ app.use(async (ctx, next) => {
 app.use(bodyParser());
 
 // Routes
-app.use(authRoutes.routes());
-app.use(authRoutes.allowedMethods());
-app.use(userRoutes.routes());
-app.use(userRoutes.allowedMethods());
+app.use(apiRoutes.routes());
+app.use(apiRoutes.allowedMethods());
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
