@@ -83,7 +83,7 @@ exports.deleteUser = async (ctx) => {
         deleted: true,
         meta: buildMeta(ctx),
       },
-      "User deleted successfully"
+      "Account deleted successfully"
     );
   } catch (error) {
     errorResponse(ctx, "Delete failed", 400, error);
@@ -142,14 +142,16 @@ exports.deleteProfilePicture = async (ctx) => {
       return errorResponse(ctx, "User not found", 404);
     }
 
-    if (user.profilePicture) {
-      const filePath = path.join(__dirname, "../../../", user.profilePicture);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-      user.profilePicture = "";
-      await user.save();
+    if (!user.profilePicture) {
+      return errorResponse(ctx, "No profile picture found to delete", 400);
     }
+
+    const filePath = path.join(__dirname, "../../../", user.profilePicture);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    user.profilePicture = "";
+    await user.save();
 
     successResponse(
       ctx,

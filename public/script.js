@@ -1,307 +1,511 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const API_VERSION = 'v2';
+document.addEventListener("DOMContentLoaded", () => {
+    const API_VERSION = "v2";
     const API_BASE_URL = `/api/${API_VERSION}`;
+    const DEFAULT_AVATAR = "/person.jpg";
 
-    const authSection = document.getElementById('auth-section');
-    const profileSection = document.getElementById('profile-section');
-    const authForm = document.getElementById('auth-form');
-    const toggleAuth = document.getElementById('toggle-auth');
-    const authTitle = document.getElementById('auth-title');
-    const authSubtitle = document.getElementById('auth-subtitle');
-    const authBtn = document.getElementById('auth-btn');
-    const nameGroup = document.getElementById('name-group');
-    const ageGroup = document.getElementById('age-group');
-    const toggleText = document.getElementById('toggle-text');
+    const authSection = document.getElementById("auth-section");
+    const profileSection = document.getElementById("profile-section");
+    const authForm = document.getElementById("auth-form");
+    const toggleAuth = document.getElementById("toggle-auth");
+    const authTitle = document.getElementById("auth-title");
+    const authSubtitle = document.getElementById("auth-subtitle");
+    const authBtn = document.getElementById("auth-btn");
+    const nameGroup = document.getElementById("name-group");
+    const ageGroup = document.getElementById("age-group");
+    const toggleText = document.getElementById("toggle-text");
 
-    const profileName = document.getElementById('profile-name');
-    const profileEmail = document.getElementById('profile-email');
-    const profileAge = document.getElementById('profile-age');
-    const profilePassword = document.getElementById('profile-password');
-    const updateBtn = document.getElementById('update-btn');
-    const deleteBtn = document.getElementById('delete-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const profileImgPreview = document.getElementById('profile-img-preview');
-    const profilePicInput = document.getElementById('profile-pic-input');
-    const changePicBtn = document.getElementById('change-pic-btn');
-    const deletePicBtn = document.getElementById('delete-pic-btn');
+    const nameInput = document.getElementById("name");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const ageInput = document.getElementById("age");
+
+    const profileName = document.getElementById("profile-name");
+    const profileEmail = document.getElementById("profile-email");
+    const profileAge = document.getElementById("profile-age");
+    const profilePassword = document.getElementById("profile-password");
+    const updateBtn = document.getElementById("update-btn");
+    const deleteBtn = document.getElementById("delete-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const profileImgPreview = document.getElementById("profile-img-preview");
+    const profilePicInput = document.getElementById("profile-pic-input");
+    const changePicBtn = document.getElementById("change-pic-btn");
+    const deletePicBtn = document.getElementById("delete-pic-btn");
+    const avatarWrapper = document.querySelector(".avatar-wrapper");
+
+    const fieldErrors = {
+        name: document.getElementById("name-error"),
+        email: document.getElementById("email-error"),
+        password: document.getElementById("password-error"),
+        age: document.getElementById("age-error")
+    };
 
     let isLogin = true;
     let currentUser = null;
-    let token = localStorage.getItem('token');
+    let token = localStorage.getItem("token");
+    let activeToastTimeout = null;
     let originalData = {
-        name: '',
-        age: '',
-        password: ''
+        name: "",
+        age: "",
+        password: ""
     };
 
     const getAuthToken = (data = {}) => data.token || data.accessToken || null;
     const getUserPayload = (data = {}) => data.user || data;
-    const getProfileImagePath = (data = {}) =>
-        data.profilePicture || data.image?.path || '';
+    const getProfileImagePath = (data = {}) => data.profilePicture || data.image?.path || "";
 
-    // Initial State Check
+    document.querySelectorAll(".password-toggle").forEach((button) => {
+        button.addEventListener("click", () => {
+            const targetInput = document.getElementById(button.dataset.target);
+            const isPassword = targetInput.type === "password";
+            targetInput.type = isPassword ? "text" : "password";
+            button.querySelector(".toggle-text").textContent = isPassword ? "Hide" : "Show";
+            button.setAttribute("aria-label", `${isPassword ? "Hide" : "Show"} password`);
+        });
+    });
+
+    ["input", "change"].forEach((eventName) => {
+        [nameInput, emailInput, passwordInput, ageInput].forEach((input) => {
+            input.addEventListener(eventName, () => clearFieldError(input.id));
+        });
+    });
+
     if (token) {
         checkAuth();
     }
 
-    // Toggle between Login and Sign Up
-    toggleAuth.addEventListener('click', (e) => {
+    toggleAuth.addEventListener("click", (e) => {
         e.preventDefault();
-        isLogin = !isLogin;
-
-        if (isLogin) {
-            authTitle.innerText = 'Welcome Back';
-            authSubtitle.innerText = 'Please login to continue';
-            authBtn.innerText = 'Login';
-            nameGroup.style.display = 'none';
-            ageGroup.style.display = 'none';
-            toggleText.innerText = "Don't have an account?";
-            toggleAuth.innerText = 'Sign Up';
-        } else {
-            authTitle.innerText = 'Create Account';
-            authSubtitle.innerText = 'Join us today and get started';
-            authBtn.innerText = 'Sign Up';
-            nameGroup.style.display = 'block';
-            ageGroup.style.display = 'block';
-            toggleText.innerText = "Already have an account?";
-            toggleAuth.innerText = 'Login';
-        }
+        setAuthMode(!isLogin);
     });
 
-    // Handle Auth Submit
-    authForm.addEventListener('submit', async (e) => {
+    authForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        clearFormErrors();
 
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const name = document.getElementById('name').value;
-        const age = document.getElementById('age').value;
+        const payload = getAuthPayload();
+        if (!payload) {
+            return;
+        }
 
-        const endpoint = isLogin
-            ? `${API_BASE_URL}/auth/login`
-            : `${API_BASE_URL}/auth/register`;
-        const payload = isLogin ? { email, password } : { name, email, password, age: parseInt(age) };
+        const endpoint = isLogin ? `${API_BASE_URL}/auth/login` : `${API_BASE_URL}/auth/register`;
+        setButtonLoading(authBtn, true, isLogin ? "Signing in..." : "Creating account...");
 
         try {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const responseBody = await request(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
-
-            const responseBody = await res.json();
-
-            if (!res.ok) throw new Error(responseBody.message || 'Something went wrong');
-
-            showToast(isLogin ? 'Login Successful' : 'Registration Successful');
 
             if (isLogin) {
                 token = getAuthToken(responseBody.data);
                 currentUser = getUserPayload(responseBody.data);
-                localStorage.setItem('token', token);
-                localStorage.setItem('userId', currentUser.id);
+                localStorage.setItem("token", token);
+                localStorage.setItem("userId", currentUser.id);
+                resetAuthForm();
+                showToast(`Welcome back, ${currentUser.name}.`, "success");
                 showProfile(currentUser);
-            } else {
-                // After signup, switch to login
-                toggleAuth.click();
+                return;
             }
+
+            showToast("Account created successfully. Please sign in with your new credentials.", "success");
+            setAuthMode(true);
+            passwordInput.focus();
         } catch (err) {
-            showToast(err.message, true);
+            handleApiError(err);
+        } finally {
+            setButtonLoading(authBtn, false, isLogin ? "Login" : "Sign Up");
         }
     });
 
-    // Handle Profile Update
-    updateBtn.addEventListener('click', async () => {
-        const userId = localStorage.getItem('userId');
+    updateBtn.addEventListener("click", async () => {
+        const userId = localStorage.getItem("userId");
+        const hasPasswordChanged = !!profilePassword.value.trim();
         const payload = {
-            name: profileName.value,
-            age: profileAge.value ? parseInt(profileAge.value) : null
+            name: profileName.value.trim(),
+            age: profileAge.value ? Number(profileAge.value) : null
         };
 
-        if (profilePassword.value) {
-            payload.password = profilePassword.value;
+        if (hasPasswordChanged) {
+            payload.password = profilePassword.value.trim();
         }
 
+        setButtonLoading(updateBtn, true, "Saving...");
+        let updateSuccessful = false;
+
         try {
-            const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
-                method: 'PUT',
+            const responseBody = await request(`${API_BASE_URL}/users/${userId}`, {
+                method: "PUT",
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
                 },
                 body: JSON.stringify(payload)
             });
 
-            const responseBody = await res.json();
-            if (!res.ok) throw new Error(responseBody.message || 'Update failed');
+            updateSuccessful = true;
 
-            showToast('Profile updated successfully');
+            if (hasPasswordChanged) {
+                performLogout("Password updated successfully. Please sign in with your new password.");
+                return;
+            }
 
-            // Update original data to match new state
-            originalData = {
-                name: profileName.value,
-                age: profileAge.value.toString(),
-                password: ''
-            };
-            profilePassword.value = '';
-            checkChanges();
+            const updatedUser = getUserPayload(responseBody.data);
+            currentUser = { ...currentUser, ...updatedUser };
+            profilePassword.value = "";
+            syncProfileState(currentUser);
+            showToast("Profile details saved successfully.", "success");
         } catch (err) {
-            showToast(err.message, true);
+            showToast(err.message || "We could not update your profile. Please try again.", "error");
+        } finally {
+            if (!updateSuccessful || !hasPasswordChanged) {
+                setButtonLoading(updateBtn, false, "Update Profile");
+                checkChanges();
+            }
         }
     });
 
-    // Handle detecting changes
-    function checkChanges() {
-        const hasNameChanged = profileName.value !== originalData.name;
-        const hasAgeChanged = profileAge.value.toString() !== originalData.age;
-        const hasPasswordChanged = profilePassword.value !== '';
-
-        updateBtn.disabled = !(hasNameChanged || hasAgeChanged || hasPasswordChanged);
-    }
-
-    [profileName, profileAge, profilePassword].forEach(input => {
-        input.addEventListener('input', checkChanges);
+    [profileName, profileAge, profilePassword].forEach((input) => {
+        input.addEventListener("input", checkChanges);
     });
 
-    // Handle Delete Account
-    deleteBtn.addEventListener('click', async () => {
-        if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
+    deleteBtn.addEventListener("click", async () => {
+        if (!confirm("Delete your account permanently? This action cannot be undone.")) {
+            return;
+        }
 
-        const userId = localStorage.getItem('userId');
+        const userId = localStorage.getItem("userId");
+        setButtonLoading(deleteBtn, true, "Deleting...");
+
         try {
-            const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+            await request(`${API_BASE_URL}/users/${userId}`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
             });
 
-            const responseBody = await res.json();
-            if (!res.ok) throw new Error(responseBody.message || 'Delete failed');
-
-            showToast('Account deleted');
-            logout();
+            performLogout("Your account has been deleted successfully.");
         } catch (err) {
-            showToast(err.message, true);
+            showToast(err.message || "We could not delete your account right now.", "error");
+        } finally {
+            setButtonLoading(deleteBtn, false, "Delete Account");
         }
     });
 
-    // Handle Image Upload
-    changePicBtn.addEventListener('click', () => profilePicInput.click());
+    changePicBtn.addEventListener("click", () => profilePicInput.click());
 
-    profilePicInput.addEventListener('change', async (e) => {
+    profilePicInput.addEventListener("change", async (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+            return;
+        }
+
+        const clientValidationError = validateImage(file);
+        if (clientValidationError) {
+            resetProfileImageInput();
+            showToast(clientValidationError, "error");
+            return;
+        }
 
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append("image", file);
+        avatarWrapper.classList.add("is-uploading");
 
         try {
-            const res = await fetch(`${API_BASE_URL}/users/upload-profile`, {
-                method: 'POST',
+            const responseBody = await request(`${API_BASE_URL}/users/upload-profile`, {
+                method: "POST",
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    "Authorization": `Bearer ${token}`
                 },
                 body: formData
             });
 
-            const responseBody = await res.json();
-            if (!res.ok) throw new Error(responseBody.message || 'Upload failed');
-
-            showToast('Profile picture updated');
             const profilePicture = getProfileImagePath(responseBody.data);
-            profileImgPreview.src = profilePicture ? `/${profilePicture}` : '/person.jpg';
-            deletePicBtn.style.display = 'flex';
+            if (currentUser) {
+                currentUser.profilePicture = profilePicture;
+            }
+            setProfileImage(profilePicture);
+            showToast("Profile picture updated successfully.", "success");
         } catch (err) {
-            showToast(err.message, true);
+            showToast(err.message || "Image upload failed. Please try another file.", "error");
+        } finally {
+            avatarWrapper.classList.remove("is-uploading");
+            resetProfileImageInput();
         }
     });
 
-    // Handle Image Delete
-    deletePicBtn.addEventListener('click', async () => {
-        if (!confirm('Are you sure you want to delete your profile picture?')) return;
+    deletePicBtn.addEventListener("click", async () => {
+        if (!confirm("Remove your current profile picture?")) {
+            return;
+        }
 
         try {
-            const res = await fetch(`${API_BASE_URL}/users/profile/image`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+            await request(`${API_BASE_URL}/users/profile/image`, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
             });
 
-            const responseBody = await res.json();
-            if (!res.ok) throw new Error(responseBody.message || 'Delete failed');
-
-            showToast('Profile picture deleted');
-            profileImgPreview.src = '/person.jpg';
-            deletePicBtn.style.display = 'none';
+            if (currentUser) {
+                currentUser.profilePicture = "";
+            }
+            setProfileImage("");
+            resetProfileImageInput();
+            showToast("Profile picture removed.", "success");
         } catch (err) {
-            showToast(err.message, true);
+            showToast(err.message || "We could not remove the profile picture.", "error");
         }
     });
 
-    // Logout Helper
-    logoutBtn.addEventListener('click', logout);
+    logoutBtn.addEventListener("click", () => performLogout("You have been logged out."));
 
-    function logout() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userId');
+    function setAuthMode(loginMode) {
+        isLogin = loginMode;
+        resetAuthForm();
+
+        authTitle.innerText = isLogin ? "Welcome Back" : "Create Account";
+        authSubtitle.innerText = isLogin
+            ? "Please login to continue"
+            : "Join us today and get started";
+        authBtn.innerText = isLogin ? "Login" : "Sign Up";
+        nameGroup.style.display = isLogin ? "none" : "block";
+        ageGroup.style.display = isLogin ? "none" : "block";
+        toggleText.innerText = isLogin ? "Don't have an account?" : "Already have an account?";
+        toggleAuth.innerText = isLogin ? "Sign Up" : "Login";
+    }
+
+    function getAuthPayload() {
+        const email = emailInput.value.trim().toLowerCase();
+        const password = passwordInput.value.trim();
+        const name = nameInput.value.trim();
+        const age = ageInput.value.trim();
+        const errors = {};
+
+        if (!email) {
+            errors.email = "Email is required.";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.email = "Enter a valid email address.";
+        }
+
+        if (!password) {
+            errors.password = "Password is required.";
+        } else if (!isLogin && password.length < 6) {
+            errors.password = "Password must be at least 6 characters.";
+        }
+
+        if (!isLogin) {
+            if (!name) {
+                errors.name = "Full name is required.";
+            } else if (name.length < 3) {
+                errors.name = "Full name must be at least 3 characters.";
+            }
+
+            if (age) {
+                const parsedAge = Number(age);
+                if (!Number.isInteger(parsedAge) || parsedAge < 1) {
+                    errors.age = "Age must be a valid positive number.";
+                }
+            }
+        }
+
+        if (Object.keys(errors).length) {
+            setFormErrors(errors);
+            const firstErrorField = Object.keys(errors)[0];
+            document.getElementById(firstErrorField).focus();
+            return null;
+        }
+
+        return isLogin
+            ? { email, password }
+            : {
+                name,
+                email,
+                password,
+                ...(age ? { age: Number(age) } : {})
+            };
+    }
+
+    function validateImage(file) {
+        const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+        if (!allowedTypes.includes(file.type)) {
+            return "Please upload a JPG, PNG, or WEBP image.";
+        }
+
+        if (file.size > 2 * 1024 * 1024) {
+            return "Image must be smaller than 2MB.";
+        }
+
+        return "";
+    }
+
+    function syncProfileState(user) {
+        showProfile(user);
+        originalData = {
+            name: user.name || "",
+            age: (user.age || "").toString(),
+            password: ""
+        };
+    }
+
+    function checkChanges() {
+        const hasNameChanged = profileName.value.trim() !== originalData.name;
+        const hasAgeChanged = profileAge.value.toString() !== originalData.age;
+        const hasPasswordChanged = profilePassword.value.trim() !== "";
+
+        updateBtn.disabled = !(hasNameChanged || hasAgeChanged || hasPasswordChanged);
+    }
+
+    function resetAuthForm() {
+        authForm.reset();
+        clearFormErrors();
+        document.querySelectorAll(".password-toggle .toggle-text").forEach((node) => {
+            node.textContent = "Show";
+        });
+        [passwordInput, profilePassword].forEach((input) => {
+            input.type = "password";
+        });
+    }
+
+    function resetProfileImageInput() {
+        profilePicInput.value = "";
+    }
+
+    function setProfileImage(profilePicture) {
+        profileImgPreview.src = profilePicture ? `/${profilePicture}` : DEFAULT_AVATAR;
+        deletePicBtn.style.display = profilePicture ? "flex" : "none";
+    }
+
+    function performLogout(message = "You have been logged out.") {
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId");
         token = null;
         currentUser = null;
-        profileSection.style.display = 'none';
-        authSection.style.display = 'block';
-        showToast('Logged out');
+        resetProfileImageInput();
+        profileSection.style.display = "none";
+        authSection.style.display = "block";
+        setAuthMode(true);
+        showToast(message, "success");
     }
 
     function showProfile(user) {
-        authSection.style.display = 'none';
-        profileSection.style.display = 'block';
+        authSection.style.display = "none";
+        profileSection.style.display = "block";
 
-        profileName.value = user.name;
-        profileEmail.value = user.email;
-        profileAge.value = user.age || '';
+        profileName.value = user.name || "";
+        profileEmail.value = user.email || "";
+        profileAge.value = user.age || "";
+        profilePassword.value = "";
+        setProfileImage(user.profilePicture || "");
 
-        if (user.profilePicture) {
-            profileImgPreview.src = `/${user.profilePicture}`;
-            deletePicBtn.style.display = 'flex';
-        } else {
-            profileImgPreview.src = '/person.jpg';
-            deletePicBtn.style.display = 'none';
-        }
-
-        // Initialize original data for change detection
         originalData = {
-            name: user.name,
-            age: (user.age || '').toString(),
-            password: ''
+            name: user.name || "",
+            age: (user.age || "").toString(),
+            password: ""
         };
         checkChanges();
     }
 
     async function checkAuth() {
-        const userId = localStorage.getItem('userId');
-        if (!userId) return;
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+            return;
+        }
 
         try {
-            const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const responseBody = await request(`${API_BASE_URL}/users/${userId}`, {
+                headers: { "Authorization": `Bearer ${token}` }
             });
-            const responseBody = await res.json();
 
-            if (res.ok) {
-                showProfile(getUserPayload(responseBody.data));
-            } else {
-                logout();
-            }
+            currentUser = getUserPayload(responseBody.data);
+            showProfile(currentUser);
         } catch (err) {
-            logout();
+            performLogout("Your session has expired. Please sign in again.");
         }
     }
 
+    async function request(url, options = {}) {
+        const res = await fetch(url, options);
+        let responseBody = {};
 
-    function showToast(message, isError = false) {
-        const toast = document.getElementById('toast');
+        try {
+            responseBody = await res.json();
+        } catch (error) {
+            responseBody = {};
+        }
+
+        if (!res.ok) {
+            const err = new Error(responseBody.message || "Something went wrong. Please try again.");
+            err.status = res.status;
+            err.details = responseBody.details || [];
+            throw err;
+        }
+
+        return responseBody;
+    }
+
+    function handleApiError(err) {
+        if (Array.isArray(err.details) && err.details.length) {
+            setFormErrors(mapApiErrorsToFields(err.details));
+        }
+
+        showToast(err.message || "Something went wrong. Please try again.", "error");
+    }
+
+    function mapApiErrorsToFields(details) {
+        return details.reduce((accumulator, detail) => {
+            if (!detail.field) {
+                return accumulator;
+            }
+
+            accumulator[detail.field] = detail.message;
+            return accumulator;
+        }, {});
+    }
+
+    function setFormErrors(errors) {
+        Object.entries(errors).forEach(([field, message]) => {
+            const input = document.getElementById(field);
+            const errorNode = fieldErrors[field];
+
+            if (input) {
+                input.classList.add("input-invalid");
+            }
+
+            if (errorNode) {
+                errorNode.textContent = message;
+            }
+        });
+    }
+
+    function clearFormErrors() {
+        Object.keys(fieldErrors).forEach(clearFieldError);
+    }
+
+    function clearFieldError(field) {
+        const input = document.getElementById(field);
+        const errorNode = fieldErrors[field];
+
+        if (input) {
+            input.classList.remove("input-invalid");
+        }
+
+        if (errorNode) {
+            errorNode.textContent = "";
+        }
+    }
+
+    function setButtonLoading(button, loading, text) {
+        button.disabled = loading;
+        button.classList.toggle("loading", loading);
+        button.textContent = text;
+    }
+
+    function showToast(message, type = "success") {
+        const toast = document.getElementById("toast");
         toast.innerText = message;
-        toast.className = 'toast show' + (isError ? ' error' : '');
+        toast.className = `toast show ${type}`;
 
-        setTimeout(() => {
-            toast.className = 'toast';
-        }, 3000);
+        window.clearTimeout(activeToastTimeout);
+        activeToastTimeout = window.setTimeout(() => {
+            toast.className = "toast";
+        }, 3500);
     }
 });

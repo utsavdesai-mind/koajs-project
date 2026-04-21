@@ -25,12 +25,13 @@ const successResponse = (ctx, data = null, message = "Success", status = 200) =>
  * @param {number} status - HTTP status code (default: 500)
  * @param {any} error - Detailed error if any
  */
-const errorResponse = (ctx, message = "Internal Server Error", status = 500, error = null) => {
+const errorResponse = (ctx, message = "Internal Server Error", status = 500, error = null, details = null) => {
     ctx.status = status;
     ctx.body = {
         success: false,
         message,
-        ...(error && { error: typeof error === 'string' ? error : error.message || error })
+        ...(error && { error: typeof error === 'string' ? error : error.message || error }),
+        ...(details && details.length ? { details } : {})
     };
 };
 

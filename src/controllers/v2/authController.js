@@ -13,7 +13,13 @@ exports.register = async (ctx) => {
 
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return errorResponse(ctx, "User already exists", 400);
+      return errorResponse(
+        ctx,
+        "An account with this email already exists. Please login instead.",
+        400,
+        null,
+        [{ field: "email", message: "This email is already registered." }]
+      );
     }
 
     const user = new User({ name, email, password, age });
@@ -45,8 +51,24 @@ exports.login = async (ctx) => {
 
     const user = await User.findOne({ email });
 
-    if (!user || !(await user.comparePassword(password))) {
-      return errorResponse(ctx, "Invalid email or password", 401);
+    if (!user) {
+      return errorResponse(
+        ctx,
+        "No account found with this email address. Please sign up first.",
+        404,
+        null,
+        [{ field: "email", message: "No account found with this email address." }]
+      );
+    }
+
+    if (!(await user.comparePassword(password))) {
+      return errorResponse(
+        ctx,
+        "Incorrect password. Please try again.",
+        401,
+        null,
+        [{ field: "password", message: "Incorrect password. Please try again." }]
+      );
     }
 
     const accessToken = generateToken({ id: user._id });

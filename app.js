@@ -1,4 +1,5 @@
 const Koa = require("koa");
+const multer = require("@koa/multer");
 const bodyParser = require("koa-bodyparser");
 const serve = require("koa-static");
 const mount = require("koa-mount");
@@ -24,7 +25,19 @@ app.use(async (ctx, next) => {
     await next();
   } catch (err) {
     console.error(err);
-    errorResponse(ctx, err.message, err.status || 500, err);
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return errorResponse(ctx, "Image must be smaller than 2MB", 400, err);
+      }
+
+      return errorResponse(ctx, "Image upload failed", 400, err);
+    }
+
+    if (err.message === "Unsupported file format. Only JPEG, JPG, PNG, and WEBP are allowed.") {
+      return errorResponse(ctx, err.message, 400, err);
+    }
+
+    errorResponse(ctx, err.message || "Internal Server Error", err.status || 500, err);
   }
 });
 

@@ -14,7 +14,12 @@ const validate = (schema) => {
 
         if (error) {
             const errorMessage = error.details[0].message;
-            return errorResponse(ctx, errorMessage, 400);
+            const details = error.details.map((detail) => ({
+                field: detail.path[0],
+                message: detail.message.replace(/"/g, "")
+            }));
+
+            return errorResponse(ctx, errorMessage.replace(/"/g, ""), 400, null, details);
         }
 
         ctx.request.body = value;
