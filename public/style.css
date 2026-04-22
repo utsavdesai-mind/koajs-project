@@ -79,12 +79,23 @@ p {
     margin-bottom: 20px;
 }
 
+#auth-form {
+    display: flex;
+    flex-direction: column;
+}
+
 .input-group label {
     display: block;
     font-size: 0.875rem;
     font-weight: 500;
     margin-bottom: 8px;
     color: var(--text-muted);
+}
+
+.required-star {
+    color: #f87171;
+    font-size: 0.8em;
+    margin-left: 2px;
 }
 
 input {
@@ -97,6 +108,17 @@ input {
     font-family: inherit;
     font-size: 1rem;
     transition: all 0.2s;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 input:focus {
@@ -150,6 +172,13 @@ input.input-invalid {
     color: #fca5a5;
 }
 
+.input-hint {
+    display: block;
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
 .btn-primary {
     width: 100%;
     background: var(--primary);
@@ -176,11 +205,12 @@ input.input-invalid {
     cursor: wait;
 }
 
-.btn-primary:disabled {
+button:disabled {
     background: var(--text-muted);
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
+    pointer-events: none;
 }
 
 .btn-outline {
@@ -200,6 +230,13 @@ input.input-invalid {
     border-color: var(--text-muted);
 }
 
+.btn-small {
+    width: auto;
+    margin-top: 0;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+}
+
 .btn-danger {
     width: 100%;
     background: var(--danger);
@@ -217,6 +254,35 @@ input.input-invalid {
 .btn-danger:hover {
     background: var(--danger-hover);
     transform: translateY(-1px);
+}
+
+.signup-image-field {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    background: var(--glass);
+}
+
+.signup-image-field img {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    object-fit: cover;
+    border: 1px solid var(--card-border);
+}
+
+.signup-image-actions {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.signup-image-actions input[type="file"] {
+    padding: 10px 12px;
 }
 
 .auth-footer {
@@ -291,6 +357,12 @@ input.input-invalid {
 .avatar-wrapper.is-uploading .avatar-overlay {
     opacity: 1;
     background: rgba(2, 8, 23, 0.78);
+}
+
+.avatar-wrapper.is-uploading,
+.avatar-wrapper.is-uploading + .delete-avatar-btn {
+    pointer-events: none;
+    cursor: wait;
 }
 
 .avatar-overlay span {
@@ -391,6 +463,36 @@ input.input-invalid {
     border-left-color: var(--success);
 }
 
+@media (min-width: 768px) {
+    .container.signup-active {
+        max-width: 860px;
+    }
+
+    #auth-section.signup-layout {
+        padding: 40px 44px;
+    }
+
+    #auth-section.signup-layout #auth-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px 24px;
+        align-items: start;
+    }
+
+    #auth-section.signup-layout #auth-form .input-group {
+        margin-bottom: 0;
+    }
+
+    #auth-section.signup-layout #signup-picture-group,
+    #auth-section.signup-layout #auth-btn {
+        grid-column: 1 / -1;
+    }
+
+    #auth-section.signup-layout #auth-btn {
+        margin-top: 4px;
+    }
+}
+
 @media (max-width: 640px) {
     body {
         align-items: stretch;
@@ -409,6 +511,17 @@ input.input-invalid {
     .profile-header {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .signup-image-field {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .signup-image-field img {
+        width: 88px;
+        height: 88px;
+        margin: 0 auto;
     }
 
     .toast {

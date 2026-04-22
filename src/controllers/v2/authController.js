@@ -1,11 +1,26 @@
 const User = require("../../models/User");
 const { generateToken } = require("../../utils/jwt");
 const { successResponse, errorResponse } = require("../../utils/response");
+const fs = require("fs");
+const path = require("path");
 
 const buildMeta = (ctx) => ({
   version: ctx.state.apiVersion || "v2",
   timestamp: new Date().toISOString(),
 });
+
+const AUTH_COOKIE_OPTIONS = {
+  httpOnly: false,
+  sameSite: "lax",
+  overwrite: true,
+  maxAge: 60 * 60 * 1000,
+};
+
+const clearUploadedFile = (file) => {
+  if (file && file.path && fs.existsSync(file.path)) {
+    fs.unlinkSync(file.path);
+  }
+};
 
 exports.register = async (ctx) => {
   try {
@@ -13,6 +28,7 @@ exports.register = async (ctx) => {
 
     const userExists = await User.findOne({ email });
     if (userExists) {
+      clearUploadedFile(ctx.file);
       return errorResponse(
         ctx,
         "An account with this email already exists. Please login instead.",
@@ -22,7 +38,12 @@ exports.register = async (ctx) => {
       );
     }
 
-    const user = new User({ name, email, password, age });
+    const userData = { name, email, password, age };
+    if (ctx.file) {
+      userData.profilePicture = path.posix.join("uploads", ctx.file.filename);
+    }
+
+    const user = new User(userData);
     await user.save();
 
     successResponse(
@@ -33,14 +54,16 @@ exports.register = async (ctx) => {
           name: user.name,
           email: user.email,
           age: user.age,
+          profilePicture: user.profilePicture,
         },
-        meta: buildMeta(ctx),
       },
       "User registered successfully",
-      201
+      201,
+      buildMeta(ctx)
     );
   } catch (error) {
     console.error(error);
+    clearUploadedFile(ctx.file);
     errorResponse(ctx, "Registration failed", 500, error);
   }
 };
@@ -72,6 +95,8 @@ exports.login = async (ctx) => {
     }
 
     const accessToken = generateToken({ id: user._id });
+    ctx.cookies.set("token", accessToken, AUTH_COOKIE_OPTIONS);
+    ctx.cookies.set("userId", String(user._id), AUTH_COOKIE_OPTIONS);
 
     successResponse(
       ctx,
@@ -84,9 +109,10 @@ exports.login = async (ctx) => {
           age: user.age,
           profilePicture: user.profilePicture,
         },
-        meta: buildMeta(ctx),
       },
-      "Login successful"
+      "Login successful",
+      200,
+      buildMeta(ctx)
     );
   } catch (error) {
     console.error(error);

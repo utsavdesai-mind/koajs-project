@@ -4,11 +4,16 @@ const { errorResponse } = require("../utils/response");
 module.exports = async (ctx, next) => {
   try {
     const authHeader = ctx.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const bearerToken = authHeader && authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : null;
+    const cookieToken = ctx.cookies.get("token");
+    const token = bearerToken || cookieToken;
+
+    if (!token) {
       return errorResponse(ctx, "Access denied. No token provided.", 401);
     }
 
-    const token = authHeader.split(" ")[1];
     const decoded = verifyToken(token);
     
     // Attach user info to context

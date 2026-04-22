@@ -1,3 +1,4 @@
+const fs = require("fs");
 const { errorResponse } = require("../utils/response");
 
 /**
@@ -13,6 +14,10 @@ const validate = (schema) => {
         });
 
         if (error) {
+            if (ctx.file && ctx.file.path && fs.existsSync(ctx.file.path)) {
+                fs.unlinkSync(ctx.file.path);
+            }
+
             const errorMessage = error.details[0].message;
             const details = error.details.map((detail) => ({
                 field: detail.path[0],

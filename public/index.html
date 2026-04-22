@@ -18,21 +18,21 @@
 
             <form id="auth-form">
                 <div class="input-group" id="name-group" style="display: none;">
-                    <label for="name">Full Name</label>
+                    <label for="name">Full Name <span class="required-star" aria-hidden="true">*</span></label>
                     <input type="text" id="name" placeholder="John Doe">
                     <span class="field-error" id="name-error"></span>
                 </div>
 
                 <div class="input-group">
-                    <label for="email">Email Address</label>
+                    <label for="email">Email Address <span class="required-star" aria-hidden="true">*</span></label>
                     <input type="email" id="email" required placeholder="name@company.com">
                     <span class="field-error" id="email-error"></span>
                 </div>
 
                 <div class="input-group">
-                    <label for="password">Password</label>
+                    <label for="password">Password <span class="required-star" aria-hidden="true">*</span></label>
                     <div class="password-field">
-                        <input type="password" id="password" required placeholder="••••••••">
+                        <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password">
                         <button type="button" class="password-toggle" data-target="password" aria-label="Show password">
                             <span class="toggle-text">Show</span>
                         </button>
@@ -42,8 +42,21 @@
 
                 <div class="input-group" id="age-group" style="display: none;">
                     <label for="age">Age</label>
-                    <input type="number" id="age" placeholder="25">
+                    <input type="number" id="age" placeholder="25" inputmode="numeric">
                     <span class="field-error" id="age-error"></span>
+                </div>
+
+                <div class="input-group" id="signup-picture-group" style="display: none;">
+                    <label for="signup-profile-pic">Profile Picture</label>
+                    <div class="signup-image-field">
+                        <img id="signup-profile-preview" src="/person.jpg" alt="Signup profile preview">
+                        <div class="signup-image-actions">
+                            <input type="file" id="signup-profile-pic" accept="image/jpeg,image/png,image/webp">
+                            <button type="button" id="clear-signup-image" class="btn-outline btn-small">Remove</button>
+                        </div>
+                    </div>
+                    <span class="input-hint">Optional. JPG, PNG, or WEBP up to 2MB.</span>
+                    <span class="field-error" id="profilePicture-error"></span>
                 </div>
 
                 <button type="submit" id="auth-btn" class="btn-primary">Login</button>
@@ -85,12 +98,12 @@
                 </div>
                 <div class="info-item">
                     <span class="label">Age</span>
-                    <input type="number" id="profile-age" class="editable-input">
+                    <input type="number" id="profile-age" class="editable-input" inputmode="numeric">
                 </div>
                 <div class="info-item">
                     <span class="label">New Password (leave blank to keep current)</span>
                     <div class="password-field">
-                        <input type="password" id="profile-password" class="editable-input" placeholder="••••••••">
+                        <input type="password" id="profile-password" class="editable-input" placeholder="••••••••" autocomplete="new-password">
                         <button type="button" class="password-toggle" data-target="profile-password"
                             aria-label="Show new password">
                             <span class="toggle-text">Show</span>

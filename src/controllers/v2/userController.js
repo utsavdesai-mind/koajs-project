@@ -20,9 +20,10 @@ exports.getUserById = async (ctx) => {
       ctx,
       {
         user,
-        meta: buildMeta(ctx),
       },
-      "User fetched successfully"
+      "User fetched successfully",
+      200,
+      buildMeta(ctx)
     );
   } catch (error) {
     errorResponse(ctx, "Invalid User ID format", 400, error);
@@ -51,9 +52,10 @@ exports.updateUser = async (ctx) => {
           profilePicture: user.profilePicture,
           updatedAt: user.updatedAt,
         },
-        meta: buildMeta(ctx),
       },
-      "User updated successfully"
+      "User updated successfully",
+      200,
+      buildMeta(ctx)
     );
   } catch (error) {
     errorResponse(ctx, "Update failed", 400, error);
@@ -81,9 +83,10 @@ exports.deleteUser = async (ctx) => {
       ctx,
       {
         deleted: true,
-        meta: buildMeta(ctx),
       },
-      "Account deleted successfully"
+      "Account deleted successfully",
+      200,
+      buildMeta(ctx)
     );
   } catch (error) {
     errorResponse(ctx, "Delete failed", 400, error);
@@ -121,9 +124,10 @@ exports.uploadProfilePicture = async (ctx) => {
           path: user.profilePicture,
           url: `${ctx.origin}/${user.profilePicture}`,
         },
-        meta: buildMeta(ctx),
       },
-      "Profile picture uploaded successfully"
+      "Profile picture uploaded successfully",
+      200,
+      buildMeta(ctx)
     );
   } catch (error) {
     if (ctx.file) {
@@ -157,9 +161,10 @@ exports.deleteProfilePicture = async (ctx) => {
       ctx,
       {
         deleted: true,
-        meta: buildMeta(ctx),
       },
-      "Profile picture deleted successfully"
+      "Profile picture deleted successfully",
+      200,
+      buildMeta(ctx)
     );
   } catch (error) {
     errorResponse(ctx, "Delete profile picture failed", 500, error);

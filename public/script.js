@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const API_BASE_URL = `/api/${API_VERSION}`;
     const DEFAULT_AVATAR = "/person.jpg";
 
+    const container = document.querySelector(".container");
     const authSection = document.getElementById("auth-section");
     const profileSection = document.getElementById("profile-section");
     const authForm = document.getElementById("auth-form");
@@ -12,12 +13,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const authBtn = document.getElementById("auth-btn");
     const nameGroup = document.getElementById("name-group");
     const ageGroup = document.getElementById("age-group");
+    const signupPictureGroup = document.getElementById("signup-picture-group");
     const toggleText = document.getElementById("toggle-text");
 
     const nameInput = document.getElementById("name");
     const emailInput = document.getElementById("email");
     const passwordInput = document.getElementById("password");
     const ageInput = document.getElementById("age");
+    const signupProfilePicInput = document.getElementById("signup-profile-pic");
+    const signupProfilePreview = document.getElementById("signup-profile-preview");
+    const clearSignupImageBtn = document.getElementById("clear-signup-image");
 
     const profileName = document.getElementById("profile-name");
     const profileEmail = document.getElementById("profile-email");
@@ -36,13 +41,17 @@ document.addEventListener("DOMContentLoaded", () => {
         name: document.getElementById("name-error"),
         email: document.getElementById("email-error"),
         password: document.getElementById("password-error"),
-        age: document.getElementById("age-error")
+        age: document.getElementById("age-error"),
+        profilePicture: document.getElementById("profilePicture-error")
     };
 
     let isLogin = true;
     let currentUser = null;
-    let token = localStorage.getItem("token");
+    let token = getCookie("token");
     let activeToastTimeout = null;
+    let isProfileBusy = false;
+    let isProfilePasswordDirty = false;
+    let signupPreviewUrl = "";
     let originalData = {
         name: "",
         age: "",
@@ -64,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     ["input", "change"].forEach((eventName) => {
-        [nameInput, emailInput, passwordInput, ageInput].forEach((input) => {
+        [nameInput, emailInput, passwordInput, ageInput, signupProfilePicInput].forEach((input) => {
             input.addEventListener(eventName, () => clearFieldError(input.id));
         });
     });
@@ -91,17 +100,37 @@ document.addEventListener("DOMContentLoaded", () => {
         setButtonLoading(authBtn, true, isLogin ? "Signing in..." : "Creating account...");
 
         try {
-            const responseBody = await request(endpoint, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
+            const requestOptions = {
+                method: "POST"
+            };
+
+            if (isLogin) {
+                requestOptions.headers = { "Content-Type": "application/json" };
+                requestOptions.body = JSON.stringify(payload);
+            } else {
+                const formData = new FormData();
+                formData.append("name", payload.name);
+                formData.append("email", payload.email);
+                formData.append("password", payload.password);
+
+                if (payload.age !== undefined) {
+                    formData.append("age", String(payload.age));
+                }
+
+                if (signupProfilePicInput.files[0]) {
+                    formData.append("profilePicture", signupProfilePicInput.files[0]);
+                }
+
+                requestOptions.body = formData;
+            }
+
+            const responseBody = await request(endpoint, requestOptions);
 
             if (isLogin) {
                 token = getAuthToken(responseBody.data);
                 currentUser = getUserPayload(responseBody.data);
-                localStorage.setItem("token", token);
-                localStorage.setItem("userId", currentUser.id);
+                setCookie("token", token);
+                setCookie("userId", currentUser.id);
                 resetAuthForm();
                 showToast(`Welcome back, ${currentUser.name}.`, "success");
                 showProfile(currentUser);
@@ -119,8 +148,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     updateBtn.addEventListener("click", async () => {
-        const userId = localStorage.getItem("userId");
-        const hasPasswordChanged = !!profilePassword.value.trim();
+        const userId = getCookie("userId");
+        if (!userId || isProfileBusy) {
+            return;
+        }
+
+        const hasPasswordChanged = isProfilePasswordDirty && !!profilePassword.value.trim();
         const payload = {
             name: profileName.value.trim(),
             age: profileAge.value ? Number(profileAge.value) : null
@@ -130,6 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
             payload.password = profilePassword.value.trim();
         }
 
+        isProfileBusy = true;
         setButtonLoading(updateBtn, true, "Saving...");
         let updateSuccessful = false;
 
@@ -153,11 +187,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const updatedUser = getUserPayload(responseBody.data);
             currentUser = { ...currentUser, ...updatedUser };
             profilePassword.value = "";
+            isProfilePasswordDirty = false;
             syncProfileState(currentUser);
             showToast("Profile details saved successfully.", "success");
         } catch (err) {
             showToast(err.message || "We could not update your profile. Please try again.", "error");
         } finally {
+            isProfileBusy = false;
             if (!updateSuccessful || !hasPasswordChanged) {
                 setButtonLoading(updateBtn, false, "Update Profile");
                 checkChanges();
@@ -169,12 +205,16 @@ document.addEventListener("DOMContentLoaded", () => {
         input.addEventListener("input", checkChanges);
     });
 
+    profilePassword.addEventListener("input", () => {
+        isProfilePasswordDirty = true;
+    });
+
     deleteBtn.addEventListener("click", async () => {
         if (!confirm("Delete your account permanently? This action cannot be undone.")) {
             return;
         }
 
-        const userId = localStorage.getItem("userId");
+        const userId = getCookie("userId");
         setButtonLoading(deleteBtn, true, "Deleting...");
 
         try {
@@ -191,11 +231,44 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    changePicBtn.addEventListener("click", () => profilePicInput.click());
+    changePicBtn.addEventListener("click", () => {
+        if (!isProfileBusy) {
+            profilePicInput.click();
+        }
+    });
+
+    signupProfilePicInput.addEventListener("change", () => {
+        const file = signupProfilePicInput.files[0];
+        clearFieldError("profilePicture");
+
+        if (!file) {
+            resetSignupImage();
+            return;
+        }
+
+        const clientValidationError = validateImage(file);
+        if (clientValidationError) {
+            setFormErrors({ profilePicture: clientValidationError });
+            resetSignupImage();
+            return;
+        }
+
+        if (signupPreviewUrl) {
+            URL.revokeObjectURL(signupPreviewUrl);
+        }
+
+        signupPreviewUrl = URL.createObjectURL(file);
+        signupProfilePreview.src = signupPreviewUrl;
+    });
+
+    clearSignupImageBtn.addEventListener("click", () => {
+        resetSignupImage();
+        clearFieldError("profilePicture");
+    });
 
     profilePicInput.addEventListener("change", async (e) => {
         const file = e.target.files[0];
-        if (!file) {
+        if (!file || isProfileBusy) {
             return;
         }
 
@@ -208,7 +281,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const formData = new FormData();
         formData.append("image", file);
+        isProfileBusy = true;
         avatarWrapper.classList.add("is-uploading");
+        setButtonLoading(updateBtn, true, "Saving...");
 
         try {
             const responseBody = await request(`${API_BASE_URL}/users/upload-profile`, {
@@ -228,7 +303,10 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             showToast(err.message || "Image upload failed. Please try another file.", "error");
         } finally {
+            isProfileBusy = false;
             avatarWrapper.classList.remove("is-uploading");
+            setButtonLoading(updateBtn, false, "Update Profile");
+            checkChanges();
             resetProfileImageInput();
         }
     });
@@ -261,13 +339,17 @@ document.addEventListener("DOMContentLoaded", () => {
         isLogin = loginMode;
         resetAuthForm();
 
+        container.classList.toggle("signup-active", !isLogin);
+        authSection.classList.toggle("signup-layout", !isLogin);
         authTitle.innerText = isLogin ? "Welcome Back" : "Create Account";
         authSubtitle.innerText = isLogin
             ? "Please login to continue"
             : "Join us today and get started";
         authBtn.innerText = isLogin ? "Login" : "Sign Up";
+        passwordInput.autocomplete = isLogin ? "current-password" : "new-password";
         nameGroup.style.display = isLogin ? "none" : "block";
         ageGroup.style.display = isLogin ? "none" : "block";
+        signupPictureGroup.style.display = isLogin ? "none" : "block";
         toggleText.innerText = isLogin ? "Don't have an account?" : "Already have an account?";
         toggleAuth.innerText = isLogin ? "Sign Up" : "Login";
     }
@@ -277,6 +359,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const password = passwordInput.value.trim();
         const name = nameInput.value.trim();
         const age = ageInput.value.trim();
+        const signupImage = signupProfilePicInput.files[0];
         const errors = {};
 
         if (!email) {
@@ -304,12 +387,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     errors.age = "Age must be a valid positive number.";
                 }
             }
+
+            if (signupImage) {
+                const imageError = validateImage(signupImage);
+                if (imageError) {
+                    errors.profilePicture = imageError;
+                }
+            }
         }
 
         if (Object.keys(errors).length) {
             setFormErrors(errors);
             const firstErrorField = Object.keys(errors)[0];
-            document.getElementById(firstErrorField).focus();
+            const firstFieldNode = document.getElementById(firstErrorField);
+            if (firstFieldNode) {
+                firstFieldNode.focus();
+            }
             return null;
         }
 
@@ -348,24 +441,41 @@ document.addEventListener("DOMContentLoaded", () => {
     function checkChanges() {
         const hasNameChanged = profileName.value.trim() !== originalData.name;
         const hasAgeChanged = profileAge.value.toString() !== originalData.age;
-        const hasPasswordChanged = profilePassword.value.trim() !== "";
+        const hasPasswordChanged = isProfilePasswordDirty && profilePassword.value.trim() !== "";
 
-        updateBtn.disabled = !(hasNameChanged || hasAgeChanged || hasPasswordChanged);
+        updateBtn.disabled = isProfileBusy || !(hasNameChanged || hasAgeChanged || hasPasswordChanged);
     }
 
     function resetAuthForm() {
         authForm.reset();
         clearFormErrors();
+        resetSignupImage();
         document.querySelectorAll(".password-toggle .toggle-text").forEach((node) => {
             node.textContent = "Show";
         });
         [passwordInput, profilePassword].forEach((input) => {
             input.type = "password";
         });
+        isProfilePasswordDirty = false;
     }
 
     function resetProfileImageInput() {
         profilePicInput.value = "";
+    }
+
+    function resetProfileActionState() {
+        isProfileBusy = false;
+        setButtonLoading(updateBtn, false, "Update Profile");
+    }
+
+    function resetSignupImage() {
+        if (signupPreviewUrl) {
+            URL.revokeObjectURL(signupPreviewUrl);
+            signupPreviewUrl = "";
+        }
+
+        signupProfilePicInput.value = "";
+        signupProfilePreview.src = DEFAULT_AVATAR;
     }
 
     function setProfileImage(profilePicture) {
@@ -374,10 +484,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function performLogout(message = "You have been logged out.") {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
+        deleteCookie("token");
+        deleteCookie("userId");
         token = null;
         currentUser = null;
+        resetProfileActionState();
+        isProfilePasswordDirty = false;
         resetProfileImageInput();
         profileSection.style.display = "none";
         authSection.style.display = "block";
@@ -386,6 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showProfile(user) {
+        resetProfileActionState();
         authSection.style.display = "none";
         profileSection.style.display = "block";
 
@@ -394,6 +507,7 @@ document.addEventListener("DOMContentLoaded", () => {
         profileAge.value = user.age || "";
         profilePassword.value = "";
         setProfileImage(user.profilePicture || "");
+        isProfilePasswordDirty = false;
 
         originalData = {
             name: user.name || "",
@@ -404,7 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function checkAuth() {
-        const userId = localStorage.getItem("userId");
+        const userId = getCookie("userId");
         if (!userId) {
             return;
         }
@@ -422,7 +536,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function request(url, options = {}) {
-        const res = await fetch(url, options);
+        const res = await fetch(url, {
+            credentials: "same-origin",
+            ...options
+        });
         let responseBody = {};
 
         try {
@@ -434,7 +551,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!res.ok) {
             const err = new Error(responseBody.message || "Something went wrong. Please try again.");
             err.status = res.status;
-            err.details = responseBody.details || [];
+            err.details = responseBody.metadata?.details || responseBody.details || [];
             throw err;
         }
 
@@ -443,7 +560,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function handleApiError(err) {
         if (Array.isArray(err.details) && err.details.length) {
-            setFormErrors(mapApiErrorsToFields(err.details));
+            const fieldLevelErrors = mapApiErrorsToFields(err.details);
+            setFormErrors(fieldLevelErrors);
+
+            const firstErrorField = Object.keys(fieldLevelErrors)[0];
+            if (firstErrorField) {
+                const field = document.getElementById(firstErrorField);
+                if (field) {
+                    field.focus();
+                }
+            }
         }
 
         showToast(err.message || "Something went wrong. Please try again.", "error");
@@ -507,5 +633,21 @@ document.addEventListener("DOMContentLoaded", () => {
         activeToastTimeout = window.setTimeout(() => {
             toast.className = "toast";
         }, 3500);
+    }
+
+    function setCookie(name, value, maxAgeSeconds = 60 * 60) {
+        document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
+    }
+
+    function getCookie(name) {
+        const cookieValue = document.cookie
+            .split("; ")
+            .find((entry) => entry.startsWith(`${name}=`));
+
+        return cookieValue ? decodeURIComponent(cookieValue.split("=")[1]) : "";
+    }
+
+    function deleteCookie(name) {
+        document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
     }
 });
