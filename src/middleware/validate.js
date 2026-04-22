@@ -20,14 +20,9 @@ const validate = (schema) => {
                 fs.unlinkSync(ctx.file.path);
             }
 
-            // Convert Joi validation details into a frontend-friendly format.
             const errorMessage = error.details[0].message;
-            const details = error.details.map((detail) => ({
-                field: detail.path[0],
-                message: detail.message.replace(/"/g, "")
-            }));
 
-            return errorResponse(ctx, errorMessage.replace(/"/g, ""), 400, null, details);
+            return errorResponse(ctx, errorMessage.replace(/"/g, ""), 400);
         }
 
         // Replace the request body with the cleaned Joi output.

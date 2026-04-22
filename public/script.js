@@ -78,6 +78,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // Prevent scientific notation and sign characters in age fields.
+    [ageInput, profileAge].forEach((input) => {
+        bindNumericFieldGuards(input);
+    });
+
     // Clear inline errors as soon as the related field changes.
     ["input", "change"].forEach((eventName) => {
         [nameInput, emailInput, passwordInput, ageInput, signupProfilePicInput].forEach((input) => {
@@ -590,42 +595,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!res.ok) {
             const err = new Error(responseBody.message || "Something went wrong. Please try again.");
-            err.status = res.status;
-            err.details = responseBody.metadata?.details || responseBody.details || [];
+            err.status = responseBody.status || res.status;
             throw err;
         }
 
         return responseBody;
     }
 
-    // Show server-side validation errors beside the related form fields.
+    // Show server-side errors using the shared toast UI.
     function handleApiError(err) {
-        if (Array.isArray(err.details) && err.details.length) {
-            const fieldLevelErrors = mapApiErrorsToFields(err.details);
-            setFormErrors(fieldLevelErrors);
-
-            const firstErrorField = Object.keys(fieldLevelErrors)[0];
-            if (firstErrorField) {
-                const field = document.getElementById(firstErrorField);
-                if (field) {
-                    field.focus();
-                }
-            }
-        }
-
         showToast(err.message || "Something went wrong. Please try again.", "error");
-    }
-
-    // Convert backend validation details into a field-to-message object.
-    function mapApiErrorsToFields(details) {
-        return details.reduce((accumulator, detail) => {
-            if (!detail.field) {
-                return accumulator;
-            }
-
-            accumulator[detail.field] = detail.message;
-            return accumulator;
-        }, {});
     }
 
     // Render inline field validation messages on the form.
@@ -636,6 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (input) {
                 input.classList.add("input-invalid");
+                input.setAttribute("aria-invalid", "true");
             }
 
             if (errorNode) {
@@ -656,6 +636,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (input) {
             input.classList.remove("input-invalid");
+            input.removeAttribute("aria-invalid");
         }
 
         if (errorNode) {
@@ -699,5 +680,26 @@ document.addEventListener("DOMContentLoaded", () => {
     // Expire a cookie immediately so the browser removes it.
     function deleteCookie(name) {
         document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+    }
+
+    // Remove any characters that are invalid for an age input and block them on keydown.
+    function bindNumericFieldGuards(input) {
+        if (!input) {
+            return;
+        }
+
+        input.addEventListener("keydown", (event) => {
+            const blockedKeys = ["e", "E", "+", "-", "."];
+            if (blockedKeys.includes(event.key)) {
+                event.preventDefault();
+            }
+        });
+
+        input.addEventListener("input", () => {
+            const cleanedValue = input.value.replace(/\D+/g, "");
+            if (input.value !== cleanedValue) {
+                input.value = cleanedValue;
+            }
+        });
     }
 });

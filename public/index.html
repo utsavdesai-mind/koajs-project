@@ -17,7 +17,7 @@
             <h1 id="auth-title">Welcome Back</h1>
             <p id="auth-subtitle">Please login to continue</p>
 
-            <form id="auth-form">
+            <form id="auth-form" novalidate>
                 <div class="input-group" id="name-group" style="display: none;">
                     <label for="name">Full Name <span class="required-star" aria-hidden="true">*</span></label>
                     <input type="text" id="name" placeholder="John Doe">
@@ -43,7 +43,7 @@
 
                 <div class="input-group" id="age-group" style="display: none;">
                     <label for="age">Age</label>
-                    <input type="number" id="age" placeholder="25" inputmode="numeric">
+                    <input type="number" id="age" placeholder="25" inputmode="numeric" min="1" step="1">
                     <span class="field-error" id="age-error"></span>
                 </div>
 
@@ -99,7 +99,7 @@
                 </div>
                 <div class="info-item">
                     <span class="label">Age</span>
-                    <input type="number" id="profile-age" class="editable-input" inputmode="numeric">
+                    <input type="number" id="profile-age" class="editable-input" inputmode="numeric" min="1" step="1">
                 </div>
                 <div class="info-item">
                     <span class="label">New Password (leave blank to keep current)</span>

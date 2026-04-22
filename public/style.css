@@ -143,6 +143,33 @@ input:focus {
     box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.18);
 }
 
+/* Keep browser autofill styling aligned with the dark input theme. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:autofill {
+    -webkit-text-fill-color: var(--text-main);
+    caret-color: var(--text-main);
+    box-shadow: 0 0 0 1000px var(--input-bg) inset;
+    -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset;
+    transition: background-color 9999s ease-out, color 9999s ease-out;
+}
+
+/* Preserve focus and invalid states even when autofill is active. */
+input:-webkit-autofill:focus {
+    border-color: var(--primary);
+    box-shadow:
+        0 0 0 1000px var(--input-bg) inset,
+        0 0 0 4px rgba(15, 118, 110, 0.18);
+}
+
+input.input-invalid:-webkit-autofill,
+input.input-invalid:-webkit-autofill:focus {
+    box-shadow:
+        0 0 0 1000px var(--input-bg) inset,
+        0 0 0 4px rgba(220, 38, 38, 0.12);
+}
+
 /* Highlight invalid inputs when validation fails. */
 input.input-invalid {
     border-color: var(--danger);

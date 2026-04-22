@@ -4,12 +4,6 @@ const { successResponse, errorResponse } = require("../../utils/response");
 const fs = require("fs");
 const path = require("path");
 
-// Build shared metadata used in every v2 auth response.
-const buildMeta = (ctx) => ({
-  version: ctx.state.apiVersion || "v2",
-  timestamp: new Date().toISOString(),
-});
-
 // Reuse one cookie configuration for login-related browser storage.
 const AUTH_COOKIE_OPTIONS = {
   httpOnly: false,
@@ -64,8 +58,7 @@ exports.register = async (ctx) => {
         },
       },
       "User registered successfully",
-      201,
-      buildMeta(ctx)
+      201
     );
   } catch (error) {
     console.error(error);
@@ -121,8 +114,7 @@ exports.login = async (ctx) => {
         },
       },
       "Login successful",
-      200,
-      buildMeta(ctx)
+      200
     );
   } catch (error) {
     console.error(error);

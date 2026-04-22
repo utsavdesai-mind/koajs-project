@@ -3,12 +3,6 @@ const path = require("path");
 const User = require("../../models/User");
 const { successResponse, errorResponse } = require("../../utils/response");
 
-// Build shared metadata so every v2 response includes version information.
-const buildMeta = (ctx) => ({
-  version: ctx.state.apiVersion || "v2",
-  timestamp: new Date().toISOString(),
-});
-
 // Fetch a single user profile without returning the password hash.
 exports.getUserById = async (ctx) => {
   try {
@@ -24,8 +18,7 @@ exports.getUserById = async (ctx) => {
         user,
       },
       "User fetched successfully",
-      200,
-      buildMeta(ctx)
+      200
     );
   } catch (error) {
     errorResponse(ctx, "Invalid User ID format", 400, error);
@@ -58,8 +51,7 @@ exports.updateUser = async (ctx) => {
         },
       },
       "User updated successfully",
-      200,
-      buildMeta(ctx)
+      200
     );
   } catch (error) {
     errorResponse(ctx, "Update failed", 400, error);
@@ -90,8 +82,7 @@ exports.deleteUser = async (ctx) => {
         deleted: true,
       },
       "Account deleted successfully",
-      200,
-      buildMeta(ctx)
+      200
     );
   } catch (error) {
     errorResponse(ctx, "Delete failed", 400, error);
@@ -134,8 +125,7 @@ exports.uploadProfilePicture = async (ctx) => {
         },
       },
       "Profile picture uploaded successfully",
-      200,
-      buildMeta(ctx)
+      200
     );
   } catch (error) {
     if (ctx.file) {
@@ -172,8 +162,7 @@ exports.deleteProfilePicture = async (ctx) => {
         deleted: true,
       },
       "Profile picture deleted successfully",
-      200,
-      buildMeta(ctx)
+      200
     );
   } catch (error) {
     errorResponse(ctx, "Delete profile picture failed", 500, error);
