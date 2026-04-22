@@ -86,12 +86,14 @@
                 <button id="delete-pic-btn" class="delete-avatar-btn" title="Delete Profile Picture">×</button>
                 <input type="file" id="profile-pic-input" style="display: none;" accept="image/*">
                 <p class="avatar-hint">Click to change picture</p>
+                <span class="field-error" id="profile-image-error"></span>
             </div>
 
             <div class="profile-info">
                 <div class="info-item">
                     <span class="label">Name</span>
                     <input type="text" id="profile-name" class="editable-input">
+                    <span class="field-error" id="profile-name-error"></span>
                 </div>
                 <div class="info-item">
                     <span class="label">Email</span>
@@ -100,6 +102,7 @@
                 <div class="info-item">
                     <span class="label">Age</span>
                     <input type="number" id="profile-age" class="editable-input" inputmode="numeric" min="1" step="1">
+                    <span class="field-error" id="profile-age-error"></span>
                 </div>
                 <div class="info-item">
                     <span class="label">New Password (leave blank to keep current)</span>
@@ -110,6 +113,7 @@
                             <span class="toggle-text">Show</span>
                         </button>
                     </div>
+                    <span class="field-error" id="profile-password-error"></span>
                 </div>
             </div>
 

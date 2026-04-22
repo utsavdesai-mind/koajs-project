@@ -78,9 +78,7 @@ exports.deleteUser = async (ctx) => {
 
     successResponse(
       ctx,
-      {
-        deleted: true,
-      },
+      null,
       "Account deleted successfully",
       200
     );
@@ -158,9 +156,7 @@ exports.deleteProfilePicture = async (ctx) => {
 
     successResponse(
       ctx,
-      {
-        deleted: true,
-      },
+      null,
       "Profile picture deleted successfully",
       200
     );

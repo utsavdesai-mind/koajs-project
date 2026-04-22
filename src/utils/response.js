@@ -2,13 +2,6 @@
  * Common response utility for Koa.js
  */
 
-// Build a compact metadata object that carries only the useful response details.
-const createMetadata = (code, message, extra = {}) => ({
-    code,
-    message,
-    ...extra
-});
-
 /**
  * Send a success response
  * @param {Object} ctx - Koa context
@@ -21,7 +14,10 @@ const successResponse = (ctx, data = null, message = "Success", status = 200, me
     ctx.status = status;
     ctx.body = {
         data,
-        metadata: createMetadata(status, message, metadata || {})
+        metadata: {
+            message,
+            ...(metadata || {})
+        }
     };
 };
 

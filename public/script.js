@@ -45,7 +45,11 @@ document.addEventListener("DOMContentLoaded", () => {
         email: document.getElementById("email-error"),
         password: document.getElementById("password-error"),
         age: document.getElementById("age-error"),
-        profilePicture: document.getElementById("profilePicture-error")
+        profilePicture: document.getElementById("profilePicture-error"),
+        "profile-name": document.getElementById("profile-name-error"),
+        "profile-age": document.getElementById("profile-age-error"),
+        "profile-password": document.getElementById("profile-password-error"),
+        "profile-image": document.getElementById("profile-image-error")
     };
 
     // Track auth mode, current session state, and unsaved profile changes.
@@ -85,6 +89,14 @@ document.addEventListener("DOMContentLoaded", () => {
     ["input", "change"].forEach((eventName) => {
         [nameInput, emailInput, passwordInput, ageInput, signupProfilePicInput].forEach((input) => {
             input.addEventListener(eventName, () => clearFieldError(input.id));
+        });
+    });
+
+    // Clear profile field errors as soon as the user edits the profile form.
+    [profileName, profileAge, profilePassword].forEach((input) => {
+        input.addEventListener("input", () => {
+            clearFieldError(input.id);
+            setProfileFormMessage("");
         });
     });
 
@@ -166,14 +178,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const hasPasswordChanged = isProfilePasswordDirty && !!profilePassword.value.trim();
-        const payload = {
-            name: profileName.value.trim(),
-            age: profileAge.value ? Number(profileAge.value) : null
-        };
-
-        // Send a password only if the user intentionally typed a new one.
-        if (hasPasswordChanged) {
-            payload.password = profilePassword.value.trim();
+        const payload = buildProfilePayload();
+        if (!payload) {
+            return;
         }
 
         isProfileBusy = true;
@@ -204,6 +211,16 @@ document.addEventListener("DOMContentLoaded", () => {
             syncProfileState(currentUser);
             showToast("Profile details saved successfully.", "success");
         } catch (err) {
+            if (err.status === 400) {
+                const mappedErrors = mapProfileApiError(err.message);
+                if (Object.keys(mappedErrors).length) {
+                    setProfileErrors(mappedErrors);
+                } else {
+                    setProfileFormMessage(err.message || "Please review the profile fields and try again.");
+                }
+                return;
+            }
+
             showToast(err.message || "We could not update your profile. Please try again.", "error");
         } finally {
             isProfileBusy = false;
@@ -292,10 +309,11 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        clearFieldError("profile-image");
         const clientValidationError = validateImage(file);
         if (clientValidationError) {
             resetProfileImageInput();
-            showToast(clientValidationError, "error");
+            setFieldError("profile-image", clientValidationError);
             return;
         }
 
@@ -318,8 +336,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentUser.profilePicture = profilePicture;
             }
             setProfileImage(profilePicture);
+            clearFieldError("profile-image");
             showToast("Profile picture updated successfully.", "success");
         } catch (err) {
+            if (err.status === 400) {
+                setFieldError("profile-image", err.message || "Please choose a valid image file.");
+                return;
+            }
+
             showToast(err.message || "Image upload failed. Please try another file.", "error");
         } finally {
             isProfileBusy = false;
@@ -336,6 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        clearFieldError("profile-image");
         try {
             await request(`${API_BASE_URL}/users/profile/image`, {
                 method: "DELETE",
@@ -347,8 +372,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             setProfileImage("");
             resetProfileImageInput();
+            clearFieldError("profile-image");
             showToast("Profile picture removed.", "success");
         } catch (err) {
+            if (err.status === 400) {
+                setFieldError("profile-image", err.message || "There is no profile picture to remove.");
+                return;
+            }
+
             showToast(err.message || "We could not remove the profile picture.", "error");
         }
     });
@@ -439,6 +470,56 @@ document.addEventListener("DOMContentLoaded", () => {
             };
     }
 
+    // Build a validated payload for profile updates before calling the API.
+    function buildProfilePayload() {
+        clearProfileErrors();
+        setProfileFormMessage("");
+
+        const name = profileName.value.trim();
+        const age = profileAge.value.trim();
+        const password = profilePassword.value.trim();
+        const errors = {};
+
+        if (!name) {
+            errors["profile-name"] = "Full name is required.";
+        } else if (name.length < 3) {
+            errors["profile-name"] = "Full name must be at least 3 characters.";
+        } else if (name.length > 30) {
+            errors["profile-name"] = "Full name must be 30 characters or less.";
+        }
+
+        if (age) {
+            const parsedAge = Number(age);
+            if (!Number.isInteger(parsedAge)) {
+                errors["profile-age"] = "Age must be a whole number.";
+            } else if (parsedAge < 1) {
+                errors["profile-age"] = "Age must be at least 1.";
+            }
+        }
+
+        if (password && password.length < 6) {
+            errors["profile-password"] = "Password must be at least 6 characters.";
+        }
+
+        if (Object.keys(errors).length) {
+            setProfileErrors(errors);
+            focusFirstProfileError(errors);
+            return null;
+        }
+
+        const payload = {
+            name
+        };
+
+        payload.age = age ? Number(age) : null;
+
+        if (password) {
+            payload.password = password;
+        }
+
+        return payload;
+    }
+
     // Validate image size and type before uploading it.
     function validateImage(file) {
         const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -495,6 +576,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function resetProfileActionState() {
         isProfileBusy = false;
         setButtonLoading(updateBtn, false, "Update Profile");
+        setProfileFormMessage("");
+        clearFieldError("profile-image");
     }
 
     // Reset the signup image picker to the default placeholder avatar.
@@ -535,6 +618,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Fill the profile form with the current user's saved data.
     function showProfile(user) {
         resetProfileActionState();
+        clearProfileErrors();
+        clearFieldError("profile-image");
         authSection.style.display = "none";
         profileSection.style.display = "block";
 
@@ -587,7 +672,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!res.ok) {
             const err = new Error(responseBody.message || "Something went wrong. Please try again.");
-            err.status = responseBody.code || responseBody.metadata?.code || res.status;
+            err.status = res.status;
             throw err;
         }
 
@@ -602,23 +687,25 @@ document.addEventListener("DOMContentLoaded", () => {
     // Render inline field validation messages on the form.
     function setFormErrors(errors) {
         Object.entries(errors).forEach(([field, message]) => {
-            const input = document.getElementById(field);
-            const errorNode = fieldErrors[field];
+            setFieldError(field, message);
+        });
+    }
 
-            if (input) {
-                input.classList.add("input-invalid");
-                input.setAttribute("aria-invalid", "true");
-            }
-
-            if (errorNode) {
-                errorNode.textContent = message;
-            }
+    // Render inline validation messages for the profile form.
+    function setProfileErrors(errors) {
+        Object.entries(errors).forEach(([field, message]) => {
+            setFieldError(field, message);
         });
     }
 
     // Clear all visible field-level validation messages.
     function clearFormErrors() {
         Object.keys(fieldErrors).forEach(clearFieldError);
+    }
+
+    // Clear profile-specific validation messages.
+    function clearProfileErrors() {
+        ["profile-name", "profile-age", "profile-password"].forEach(clearFieldError);
     }
 
     // Remove the error style and message from a single field.
@@ -634,6 +721,73 @@ document.addEventListener("DOMContentLoaded", () => {
         if (errorNode) {
             errorNode.textContent = "";
         }
+    }
+
+    // Apply an inline error message to a single field.
+    function setFieldError(field, message) {
+        const input = document.getElementById(field);
+        const errorNode = fieldErrors[field];
+
+        if (input) {
+            input.classList.add("input-invalid");
+            input.setAttribute("aria-invalid", "true");
+        }
+
+        if (errorNode) {
+            errorNode.textContent = message;
+        }
+    }
+
+    // Show a profile-level message when the backend error cannot be mapped to one field.
+    function setProfileFormMessage(message) {
+        let banner = document.getElementById("profile-form-message");
+
+        if (!banner && !message) {
+            return;
+        }
+
+        if (!message && banner) {
+            banner.remove();
+            return;
+        }
+
+        if (!banner) {
+            banner = document.createElement("div");
+            banner.id = "profile-form-message";
+            banner.className = "field-error";
+            banner.style.display = "block";
+            profileSection.insertBefore(banner, profileSection.querySelector(".profile-actions"));
+        }
+
+        banner.textContent = message || "";
+    }
+
+    // Focus the first profile field that failed validation.
+    function focusFirstProfileError(errors) {
+        const firstField = Object.keys(errors)[0];
+        const input = document.getElementById(firstField);
+        if (input) {
+            input.focus();
+        }
+    }
+
+    // Map backend validation text to the matching profile field.
+    function mapProfileApiError(message = "") {
+        const normalized = message.toLowerCase();
+
+        if (normalized.includes("name")) {
+            return { "profile-name": message };
+        }
+
+        if (normalized.includes("age")) {
+            return { "profile-age": message };
+        }
+
+        if (normalized.includes("password")) {
+            return { "profile-password": message };
+        }
+
+        return {};
     }
 
     // Update button text and disabled state during async actions.
