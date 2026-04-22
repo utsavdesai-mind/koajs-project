@@ -9,6 +9,7 @@ const connectDB = require("./src/config/db");
 
 // Create the main Koa app that handles every incoming request.
 const app = new Koa();
+app.proxy = true;
 
 // Connect to MongoDB before the server starts serving API traffic.
 connectDB();
