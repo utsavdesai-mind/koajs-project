@@ -51,7 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Track auth mode, current session state, and unsaved profile changes.
     let isLogin = true;
     let currentUser = null;
-    let token = getCookie("token");
     let activeToastTimeout = null;
     let isProfileBusy = false;
     let isProfilePasswordDirty = false;
@@ -63,7 +62,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // Normalize the slightly different response shapes used across API versions.
-    const getAuthToken = (data = {}) => data.token || data.accessToken || null;
     const getUserPayload = (data = {}) => data.user || data;
     const getProfileImagePath = (data = {}) => data.profilePicture || data.image?.path || "";
 
@@ -90,10 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Restore the previous session automatically if a token cookie already exists.
-    if (token) {
-        checkAuth();
-    }
+    // Restore the previous session automatically via the cookie-backed session endpoint.
+    checkAuth();
 
     // Switch between login and signup layouts.
     toggleAuth.addEventListener("click", (e) => {
@@ -144,11 +140,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const responseBody = await request(endpoint, requestOptions);
 
             if (isLogin) {
-                // Save auth data locally, then swap the UI to the profile screen.
-                token = getAuthToken(responseBody.data);
+                // Use the cookie set by the server, then swap the UI to the profile screen.
                 currentUser = getUserPayload(responseBody.data);
-                setCookie("token", token);
-                setCookie("userId", currentUser.id);
                 resetAuthForm();
                 showToast(`Welcome back, ${currentUser.name}.`, "success");
                 showProfile(currentUser);
@@ -167,7 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Save profile edits only when a user is logged in and the form is not busy.
     updateBtn.addEventListener("click", async () => {
-        const userId = getCookie("userId");
+        const userId = currentUser?.id;
         if (!userId || isProfileBusy) {
             return;
         }
@@ -191,8 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const responseBody = await request(`${API_BASE_URL}/users/${userId}`, {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify(payload)
             });
@@ -238,13 +230,13 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const userId = getCookie("userId");
+        const userId = currentUser?.id;
         setButtonLoading(deleteBtn, true, "Deleting...");
 
         try {
             await request(`${API_BASE_URL}/users/${userId}`, {
                 method: "DELETE",
-                headers: { "Authorization": `Bearer ${token}` }
+                headers: {}
             });
 
             performLogout("Your account has been deleted successfully.");
@@ -317,9 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Send the image as multipart/form-data to the upload endpoint.
             const responseBody = await request(`${API_BASE_URL}/users/upload-profile`, {
                 method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                },
+                headers: {},
                 body: formData
             });
 
@@ -349,7 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             await request(`${API_BASE_URL}/users/profile/image`, {
                 method: "DELETE",
-                headers: { "Authorization": `Bearer ${token}` }
+                headers: {}
             });
 
             if (currentUser) {
@@ -526,9 +516,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Remove auth cookies, clear local state, and show the auth view again.
     function performLogout(message = "You have been logged out.") {
-        deleteCookie("token");
-        deleteCookie("userId");
-        token = null;
+        request(`${API_BASE_URL}/auth/logout`, {
+            method: "POST"
+        }).catch(() => {
+            // The client still clears local state even if the server cookie could not be removed.
+        });
+
         currentUser = null;
         resetProfileActionState();
         isProfilePasswordDirty = false;
@@ -562,20 +555,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Validate the saved session by loading the current user's profile.
     async function checkAuth() {
-        const userId = getCookie("userId");
-        if (!userId) {
-            return;
-        }
-
         try {
-            const responseBody = await request(`${API_BASE_URL}/users/${userId}`, {
-                headers: { "Authorization": `Bearer ${token}` }
+            const responseBody = await request(`${API_BASE_URL}/auth/me`, {
+                method: "GET"
             });
 
             currentUser = getUserPayload(responseBody.data);
             showProfile(currentUser);
         } catch (err) {
-            performLogout("Your session has expired. Please sign in again.");
+            if (err.status === 401) {
+                return;
+            }
+
+            showToast(err.message || "We could not restore your session right now.", "error");
         }
     }
 
@@ -595,7 +587,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!res.ok) {
             const err = new Error(responseBody.message || "Something went wrong. Please try again.");
-            err.status = responseBody.status || res.status;
+            err.status = responseBody.code || responseBody.metadata?.code || res.status;
             throw err;
         }
 
@@ -661,25 +653,6 @@ document.addEventListener("DOMContentLoaded", () => {
         activeToastTimeout = window.setTimeout(() => {
             toast.className = "toast";
         }, 3500);
-    }
-
-    // Save a short-lived cookie used for browser auth state.
-    function setCookie(name, value, maxAgeSeconds = 60 * 60) {
-        document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
-    }
-
-    // Read a single cookie value by name from document.cookie.
-    function getCookie(name) {
-        const cookieValue = document.cookie
-            .split("; ")
-            .find((entry) => entry.startsWith(`${name}=`));
-
-        return cookieValue ? decodeURIComponent(cookieValue.split("=")[1]) : "";
-    }
-
-    // Expire a cookie immediately so the browser removes it.
-    function deleteCookie(name) {
-        document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
     }
 
     // Remove any characters that are invalid for an age input and block them on keydown.

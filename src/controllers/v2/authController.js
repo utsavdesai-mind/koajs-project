@@ -6,10 +6,18 @@ const path = require("path");
 
 // Reuse one cookie configuration for login-related browser storage.
 const AUTH_COOKIE_OPTIONS = {
-  httpOnly: false,
+  httpOnly: true,
   sameSite: "lax",
   overwrite: true,
+  secure: process.env.NODE_ENV === "production",
   maxAge: 60 * 60 * 1000,
+};
+
+const clearAuthCookies = (ctx) => {
+  ctx.cookies.set("token", null, {
+    ...AUTH_COOKIE_OPTIONS,
+    maxAge: 0,
+  });
 };
 
 // Remove an uploaded file when the request fails after Multer saves it.
@@ -99,12 +107,10 @@ exports.login = async (ctx) => {
     // Save the token in cookies so browser requests stay authenticated.
     const accessToken = generateToken({ id: user._id });
     ctx.cookies.set("token", accessToken, AUTH_COOKIE_OPTIONS);
-    ctx.cookies.set("userId", String(user._id), AUTH_COOKIE_OPTIONS);
 
     successResponse(
       ctx,
       {
-        accessToken,
         user: {
           id: user._id,
           name: user.name,
@@ -120,4 +126,45 @@ exports.login = async (ctx) => {
     console.error(error);
     errorResponse(ctx, "Login failed", 500, error);
   }
+};
+
+// Return the current authenticated user from the login cookie.
+exports.me = async (ctx) => {
+  try {
+    const userId = ctx.state.user?.id;
+
+    if (!userId) {
+      return errorResponse(ctx, "Unauthorized", 401);
+    }
+
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return errorResponse(ctx, "User not found", 404);
+    }
+
+    successResponse(
+      ctx,
+      {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          age: user.age,
+          profilePicture: user.profilePicture,
+        },
+      },
+      "User fetched successfully",
+      200
+    );
+  } catch (error) {
+    console.error(error);
+    errorResponse(ctx, "Unable to load current user", 500, error);
+  }
+};
+
+// Clear the auth cookie so the browser fully logs out.
+exports.logout = async (ctx) => {
+  clearAuthCookies(ctx);
+  successResponse(ctx, null, "Logged out successfully", 200);
 };

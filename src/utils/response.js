@@ -3,8 +3,8 @@
  */
 
 // Build a compact metadata object that carries only the useful response details.
-const createMetadata = (status, message, extra = {}) => ({
-    status,
+const createMetadata = (code, message, extra = {}) => ({
+    code,
     message,
     ...extra
 });
@@ -20,7 +20,6 @@ const createMetadata = (status, message, extra = {}) => ({
 const successResponse = (ctx, data = null, message = "Success", status = 200, metadata = null) => {
     ctx.status = status;
     ctx.body = {
-        success: true,
         data,
         metadata: createMetadata(status, message, metadata || {})
     };
@@ -37,7 +36,6 @@ const errorResponse = (ctx, message = "Internal Server Error", status = 500, err
     // Keep the public error payload minimal and consistent across the app.
     ctx.status = status;
     ctx.body = {
-        status,
         message
     };
 };
