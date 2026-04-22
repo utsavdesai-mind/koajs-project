@@ -4,11 +4,13 @@ const { successResponse, errorResponse } = require("../../utils/response");
 const fs = require("fs");
 const path = require("path");
 
+// Build shared metadata used in every v2 auth response.
 const buildMeta = (ctx) => ({
   version: ctx.state.apiVersion || "v2",
   timestamp: new Date().toISOString(),
 });
 
+// Reuse one cookie configuration for login-related browser storage.
 const AUTH_COOKIE_OPTIONS = {
   httpOnly: false,
   sameSite: "lax",
@@ -16,16 +18,19 @@ const AUTH_COOKIE_OPTIONS = {
   maxAge: 60 * 60 * 1000,
 };
 
+// Remove an uploaded file when the request fails after Multer saves it.
 const clearUploadedFile = (file) => {
   if (file && file.path && fs.existsSync(file.path)) {
     fs.unlinkSync(file.path);
   }
 };
 
+// Register a v2 user and optionally save a profile picture.
 exports.register = async (ctx) => {
   try {
     const { name, email, password, age } = ctx.request.body;
 
+    // Prevent duplicate accounts and clean up uploaded files if needed.
     const userExists = await User.findOne({ email });
     if (userExists) {
       clearUploadedFile(ctx.file);
@@ -40,6 +45,7 @@ exports.register = async (ctx) => {
 
     const userData = { name, email, password, age };
     if (ctx.file) {
+      // Keep a relative file path that the frontend can use directly.
       userData.profilePicture = path.posix.join("uploads", ctx.file.filename);
     }
 
@@ -68,10 +74,12 @@ exports.register = async (ctx) => {
   }
 };
 
+// Authenticate a v2 user, then send the token in cookies and the response body.
 exports.login = async (ctx) => {
   try {
     const { email, password } = ctx.request.body;
 
+    // Return a field-level email error when the account does not exist.
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -84,6 +92,7 @@ exports.login = async (ctx) => {
       );
     }
 
+    // Return a field-level password error when the password is incorrect.
     if (!(await user.comparePassword(password))) {
       return errorResponse(
         ctx,
@@ -94,6 +103,7 @@ exports.login = async (ctx) => {
       );
     }
 
+    // Save the token in cookies so browser requests stay authenticated.
     const accessToken = generateToken({ id: user._id });
     ctx.cookies.set("token", accessToken, AUTH_COOKIE_OPTIONS);
     ctx.cookies.set("userId", String(user._id), AUTH_COOKIE_OPTIONS);

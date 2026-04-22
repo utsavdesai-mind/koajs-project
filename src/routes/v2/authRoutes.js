@@ -7,10 +7,12 @@ const {
   loginSchema,
 } = require("../../validations/authValidation");
 
+// Group v2 authentication routes under /auth.
 const router = new Router({
   prefix: "/auth",
 });
 
+// Accept an optional profile picture during signup, then validate the rest of the form.
 router.post("/register", upload.single("profilePicture"), validate(registerSchema), authController.register);
 router.post("/login", validate(loginSchema), authController.login);
 

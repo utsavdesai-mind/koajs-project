@@ -1,8 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // Central API and image paths used throughout the frontend.
     const API_VERSION = "v2";
     const API_BASE_URL = `/api/${API_VERSION}`;
     const DEFAULT_AVATAR = "/person.jpg";
 
+    // Cache frequently used DOM nodes once at startup.
     const container = document.querySelector(".container");
     const authSection = document.getElementById("auth-section");
     const profileSection = document.getElementById("profile-section");
@@ -37,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const deletePicBtn = document.getElementById("delete-pic-btn");
     const avatarWrapper = document.querySelector(".avatar-wrapper");
 
+    // Map each form field to its inline error element.
     const fieldErrors = {
         name: document.getElementById("name-error"),
         email: document.getElementById("email-error"),
@@ -45,6 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
         profilePicture: document.getElementById("profilePicture-error")
     };
 
+    // Track auth mode, current session state, and unsaved profile changes.
     let isLogin = true;
     let currentUser = null;
     let token = getCookie("token");
@@ -58,10 +62,12 @@ document.addEventListener("DOMContentLoaded", () => {
         password: ""
     };
 
+    // Normalize the slightly different response shapes used across API versions.
     const getAuthToken = (data = {}) => data.token || data.accessToken || null;
     const getUserPayload = (data = {}) => data.user || data;
     const getProfileImagePath = (data = {}) => data.profilePicture || data.image?.path || "";
 
+    // Allow users to toggle password visibility in both auth forms.
     document.querySelectorAll(".password-toggle").forEach((button) => {
         button.addEventListener("click", () => {
             const targetInput = document.getElementById(button.dataset.target);
@@ -72,21 +78,25 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // Clear inline errors as soon as the related field changes.
     ["input", "change"].forEach((eventName) => {
         [nameInput, emailInput, passwordInput, ageInput, signupProfilePicInput].forEach((input) => {
             input.addEventListener(eventName, () => clearFieldError(input.id));
         });
     });
 
+    // Restore the previous session automatically if a token cookie already exists.
     if (token) {
         checkAuth();
     }
 
+    // Switch between login and signup layouts.
     toggleAuth.addEventListener("click", (e) => {
         e.preventDefault();
         setAuthMode(!isLogin);
     });
 
+    // Submit either a login request or a signup request based on the current mode.
     authForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         clearFormErrors();
@@ -105,9 +115,11 @@ document.addEventListener("DOMContentLoaded", () => {
             };
 
             if (isLogin) {
+                // Login uses JSON because no file upload is required.
                 requestOptions.headers = { "Content-Type": "application/json" };
                 requestOptions.body = JSON.stringify(payload);
             } else {
+                // Signup uses FormData so text fields and an optional image can be sent together.
                 const formData = new FormData();
                 formData.append("name", payload.name);
                 formData.append("email", payload.email);
@@ -127,6 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const responseBody = await request(endpoint, requestOptions);
 
             if (isLogin) {
+                // Save auth data locally, then swap the UI to the profile screen.
                 token = getAuthToken(responseBody.data);
                 currentUser = getUserPayload(responseBody.data);
                 setCookie("token", token);
@@ -147,6 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Save profile edits only when a user is logged in and the form is not busy.
     updateBtn.addEventListener("click", async () => {
         const userId = getCookie("userId");
         if (!userId || isProfileBusy) {
@@ -159,6 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
             age: profileAge.value ? Number(profileAge.value) : null
         };
 
+        // Send a password only if the user intentionally typed a new one.
         if (hasPasswordChanged) {
             payload.password = profilePassword.value.trim();
         }
@@ -180,6 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
             updateSuccessful = true;
 
             if (hasPasswordChanged) {
+                // Force a fresh login after a password change so auth stays in sync.
                 performLogout("Password updated successfully. Please sign in with your new password.");
                 return;
             }
@@ -201,14 +217,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Recalculate whether the save button should be enabled when fields change.
     [profileName, profileAge, profilePassword].forEach((input) => {
         input.addEventListener("input", checkChanges);
     });
 
+    // Remember that the password field has been manually touched.
     profilePassword.addEventListener("input", () => {
         isProfilePasswordDirty = true;
     });
 
+    // Delete the current account after the user confirms the action.
     deleteBtn.addEventListener("click", async () => {
         if (!confirm("Delete your account permanently? This action cannot be undone.")) {
             return;
@@ -231,12 +250,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Open the hidden file chooser when the user clicks the avatar overlay.
     changePicBtn.addEventListener("click", () => {
         if (!isProfileBusy) {
             profilePicInput.click();
         }
     });
 
+    // Preview the selected signup image before upload.
     signupProfilePicInput.addEventListener("change", () => {
         const file = signupProfilePicInput.files[0];
         clearFieldError("profilePicture");
@@ -261,11 +282,13 @@ document.addEventListener("DOMContentLoaded", () => {
         signupProfilePreview.src = signupPreviewUrl;
     });
 
+    // Remove the signup image preview and restore the placeholder avatar.
     clearSignupImageBtn.addEventListener("click", () => {
         resetSignupImage();
         clearFieldError("profilePicture");
     });
 
+    // Upload a replacement profile picture for the signed-in user.
     profilePicInput.addEventListener("change", async (e) => {
         const file = e.target.files[0];
         if (!file || isProfileBusy) {
@@ -286,6 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setButtonLoading(updateBtn, true, "Saving...");
 
         try {
+            // Send the image as multipart/form-data to the upload endpoint.
             const responseBody = await request(`${API_BASE_URL}/users/upload-profile`, {
                 method: "POST",
                 headers: {
@@ -311,6 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Delete the current profile picture after confirmation.
     deletePicBtn.addEventListener("click", async () => {
         if (!confirm("Remove your current profile picture?")) {
             return;
@@ -333,8 +358,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Clear browser auth state and return to the login screen.
     logoutBtn.addEventListener("click", () => performLogout("You have been logged out."));
 
+    // Toggle the auth form between login and signup modes.
     function setAuthMode(loginMode) {
         isLogin = loginMode;
         resetAuthForm();
@@ -354,6 +381,7 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleAuth.innerText = isLogin ? "Sign Up" : "Login";
     }
 
+    // Build a validated payload for login or signup requests.
     function getAuthPayload() {
         const email = emailInput.value.trim().toLowerCase();
         const password = passwordInput.value.trim();
@@ -416,6 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
             };
     }
 
+    // Validate image size and type before uploading it.
     function validateImage(file) {
         const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
         if (!allowedTypes.includes(file.type)) {
@@ -429,6 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return "";
     }
 
+    // Sync the visible profile fields and the original change-tracking snapshot.
     function syncProfileState(user) {
         showProfile(user);
         originalData = {
@@ -438,6 +468,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
+    // Enable the update button only when profile data has actually changed.
     function checkChanges() {
         const hasNameChanged = profileName.value.trim() !== originalData.name;
         const hasAgeChanged = profileAge.value.toString() !== originalData.age;
@@ -446,6 +477,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateBtn.disabled = isProfileBusy || !(hasNameChanged || hasAgeChanged || hasPasswordChanged);
     }
 
+    // Reset auth form values, errors, previews, and password visibility states.
     function resetAuthForm() {
         authForm.reset();
         clearFormErrors();
@@ -459,15 +491,18 @@ document.addEventListener("DOMContentLoaded", () => {
         isProfilePasswordDirty = false;
     }
 
+    // Clear the hidden file input so the same image can be selected again later.
     function resetProfileImageInput() {
         profilePicInput.value = "";
     }
 
+    // Restore button and loading state after profile operations complete.
     function resetProfileActionState() {
         isProfileBusy = false;
         setButtonLoading(updateBtn, false, "Update Profile");
     }
 
+    // Reset the signup image picker to the default placeholder avatar.
     function resetSignupImage() {
         if (signupPreviewUrl) {
             URL.revokeObjectURL(signupPreviewUrl);
@@ -478,11 +513,13 @@ document.addEventListener("DOMContentLoaded", () => {
         signupProfilePreview.src = DEFAULT_AVATAR;
     }
 
+    // Render either the user's uploaded avatar or the default fallback image.
     function setProfileImage(profilePicture) {
         profileImgPreview.src = profilePicture ? `/${profilePicture}` : DEFAULT_AVATAR;
         deletePicBtn.style.display = profilePicture ? "flex" : "none";
     }
 
+    // Remove auth cookies, clear local state, and show the auth view again.
     function performLogout(message = "You have been logged out.") {
         deleteCookie("token");
         deleteCookie("userId");
@@ -497,6 +534,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast(message, "success");
     }
 
+    // Fill the profile form with the current user's saved data.
     function showProfile(user) {
         resetProfileActionState();
         authSection.style.display = "none";
@@ -517,6 +555,7 @@ document.addEventListener("DOMContentLoaded", () => {
         checkChanges();
     }
 
+    // Validate the saved session by loading the current user's profile.
     async function checkAuth() {
         const userId = getCookie("userId");
         if (!userId) {
@@ -535,6 +574,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Wrap fetch so API calls share credentials, JSON parsing, and error handling.
     async function request(url, options = {}) {
         const res = await fetch(url, {
             credentials: "same-origin",
@@ -558,6 +598,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return responseBody;
     }
 
+    // Show server-side validation errors beside the related form fields.
     function handleApiError(err) {
         if (Array.isArray(err.details) && err.details.length) {
             const fieldLevelErrors = mapApiErrorsToFields(err.details);
@@ -575,6 +616,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast(err.message || "Something went wrong. Please try again.", "error");
     }
 
+    // Convert backend validation details into a field-to-message object.
     function mapApiErrorsToFields(details) {
         return details.reduce((accumulator, detail) => {
             if (!detail.field) {
@@ -586,6 +628,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, {});
     }
 
+    // Render inline field validation messages on the form.
     function setFormErrors(errors) {
         Object.entries(errors).forEach(([field, message]) => {
             const input = document.getElementById(field);
@@ -601,10 +644,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Clear all visible field-level validation messages.
     function clearFormErrors() {
         Object.keys(fieldErrors).forEach(clearFieldError);
     }
 
+    // Remove the error style and message from a single field.
     function clearFieldError(field) {
         const input = document.getElementById(field);
         const errorNode = fieldErrors[field];
@@ -618,12 +663,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Update button text and disabled state during async actions.
     function setButtonLoading(button, loading, text) {
         button.disabled = loading;
         button.classList.toggle("loading", loading);
         button.textContent = text;
     }
 
+    // Show a temporary toast notification for success or error feedback.
     function showToast(message, type = "success") {
         const toast = document.getElementById("toast");
         toast.innerText = message;
@@ -635,10 +682,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 3500);
     }
 
+    // Save a short-lived cookie used for browser auth state.
     function setCookie(name, value, maxAgeSeconds = 60 * 60) {
         document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
     }
 
+    // Read a single cookie value by name from document.cookie.
     function getCookie(name) {
         const cookieValue = document.cookie
             .split("; ")
@@ -647,6 +696,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return cookieValue ? decodeURIComponent(cookieValue.split("=")[1]) : "";
     }
 
+    // Expire a cookie immediately so the browser removes it.
     function deleteCookie(name) {
         document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
     }

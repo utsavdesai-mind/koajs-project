@@ -1,4 +1,5 @@
 :root {
+    /* Shared design tokens used across the whole interface. */
     --primary: #0f766e;
     --primary-hover: #115e59;
     --danger: #dc2626;
@@ -14,12 +15,14 @@
     --input-bg: rgba(15, 23, 42, 0.72);
 }
 
+/* Reset browser defaults so spacing stays consistent everywhere. */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* Center the application on top of the page background. */
 body {
     font-family: 'Outfit', sans-serif;
     background: var(--bg-gradient);
@@ -31,6 +34,7 @@ body {
     overflow-x: hidden;
 }
 
+/* Limit content width while keeping it responsive. */
 .container {
     width: 100%;
     max-width: 520px;
@@ -38,6 +42,7 @@ body {
     margin: auto;
 }
 
+/* Reusable glass-style panel used for auth and profile sections. */
 .card {
     background: var(--card-bg);
     backdrop-filter: blur(12px);
@@ -47,6 +52,7 @@ body {
     box-shadow: 0 30px 60px -28px rgba(2, 8, 23, 0.9);
 }
 
+/* Apply a soft entry animation when cards appear. */
 .fade-in {
     animation: fadeIn 0.5s ease-out;
 }
@@ -63,6 +69,7 @@ body {
     }
 }
 
+/* Style the main section headings. */
 h1 {
     font-size: 2rem;
     font-weight: 600;
@@ -70,20 +77,24 @@ h1 {
     letter-spacing: -0.025em;
 }
 
+/* Style helper text and subtitles. */
 p {
     color: var(--text-muted);
     margin-bottom: 32px;
 }
 
+/* Add spacing between each form field block. */
 .input-group {
     margin-bottom: 20px;
 }
 
+/* Stack auth form fields vertically by default. */
 #auth-form {
     display: flex;
     flex-direction: column;
 }
 
+/* Style field labels consistently across forms. */
 .input-group label {
     display: block;
     font-size: 0.875rem;
@@ -92,12 +103,14 @@ p {
     color: var(--text-muted);
 }
 
+/* Highlight required labels with a subtle red indicator. */
 .required-star {
     color: #f87171;
     font-size: 0.8em;
     margin-left: 2px;
 }
 
+/* Shared text-input styling for auth and profile sections. */
 input {
     width: 100%;
     background: var(--input-bg);
@@ -110,6 +123,7 @@ input {
     transition: all 0.2s;
 }
 
+/* Hide browser number spinners for a cleaner custom look. */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -121,6 +135,7 @@ input[type="number"] {
     appearance: textfield;
 }
 
+/* Show a clear focus state when an input is active. */
 input:focus {
     outline: none;
     border-color: var(--primary);
@@ -128,19 +143,23 @@ input:focus {
     box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.18);
 }
 
+/* Highlight invalid inputs when validation fails. */
 input.input-invalid {
     border-color: var(--danger);
     box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
 }
 
+/* Position the show/hide password button inside password inputs. */
 .password-field {
     position: relative;
 }
 
+/* Reserve space on the right for the password toggle button. */
 .password-field input {
     padding-right: 80px;
 }
 
+/* Style the inline password visibility toggle. */
 .password-toggle {
     position: absolute;
     top: 50%;
@@ -164,6 +183,7 @@ input.input-invalid {
     outline: none;
 }
 
+/* Reserve room below inputs for validation messages. */
 .field-error {
     display: block;
     min-height: 18px;
@@ -172,6 +192,7 @@ input.input-invalid {
     color: #fca5a5;
 }
 
+/* Small helper text used for optional guidance. */
 .input-hint {
     display: block;
     margin-top: 8px;
@@ -179,6 +200,7 @@ input.input-invalid {
     font-size: 0.8rem;
 }
 
+/* Main action button style used for submit and save actions. */
 .btn-primary {
     width: 100%;
     background: var(--primary);
@@ -198,6 +220,7 @@ input.input-invalid {
     transform: translateY(-1px);
 }
 
+/* Dim buttons while async actions are in progress. */
 .btn-primary.loading,
 .btn-outline.loading,
 .btn-danger.loading {
@@ -205,6 +228,7 @@ input.input-invalid {
     cursor: wait;
 }
 
+/* Shared disabled-state button styling. */
 button:disabled {
     background: var(--text-muted);
     opacity: 0.5;
@@ -213,6 +237,7 @@ button:disabled {
     pointer-events: none;
 }
 
+/* Secondary action button style used for less-prominent actions. */
 .btn-outline {
     background: transparent;
     color: var(--text-main);
@@ -230,6 +255,7 @@ button:disabled {
     border-color: var(--text-muted);
 }
 
+/* Compact button variant used in the signup image section. */
 .btn-small {
     width: auto;
     margin-top: 0;
@@ -237,6 +263,7 @@ button:disabled {
     font-size: 0.85rem;
 }
 
+/* Destructive button style used for delete actions. */
 .btn-danger {
     width: 100%;
     background: var(--danger);
@@ -256,6 +283,7 @@ button:disabled {
     transform: translateY(-1px);
 }
 
+/* Layout for the signup image preview and its controls. */
 .signup-image-field {
     display: flex;
     align-items: center;
@@ -274,6 +302,7 @@ button:disabled {
     border: 1px solid var(--card-border);
 }
 
+/* Stack the signup image file input and remove button. */
 .signup-image-actions {
     flex: 1;
     display: flex;
@@ -285,6 +314,7 @@ button:disabled {
     padding: 10px 12px;
 }
 
+/* Bottom prompt that lets users switch auth modes. */
 .auth-footer {
     margin-top: 24px;
     text-align: center;
@@ -303,6 +333,7 @@ button:disabled {
     text-decoration: underline;
 }
 
+/* Arrange the profile title and logout button in one row. */
 .profile-header {
     display: flex;
     justify-content: space-between;
@@ -311,6 +342,7 @@ button:disabled {
     gap: 12px;
 }
 
+/* Center the avatar block inside the profile card. */
 .profile-avatar-container {
     display: flex;
     flex-direction: column;
@@ -319,6 +351,7 @@ button:disabled {
     position: relative;
 }
 
+/* Circular frame used for the profile image. */
 .avatar-wrapper {
     position: relative;
     width: 120px;
@@ -336,6 +369,7 @@ button:disabled {
     object-fit: cover;
 }
 
+/* Hover overlay that indicates the avatar can be changed. */
 .avatar-overlay {
     position: absolute;
     top: 0;
@@ -354,11 +388,13 @@ button:disabled {
     opacity: 1;
 }
 
+/* Keep the overlay visible while an upload request is running. */
 .avatar-wrapper.is-uploading .avatar-overlay {
     opacity: 1;
     background: rgba(2, 8, 23, 0.78);
 }
 
+/* Prevent avatar actions during upload. */
 .avatar-wrapper.is-uploading,
 .avatar-wrapper.is-uploading + .delete-avatar-btn {
     pointer-events: none;
@@ -371,6 +407,7 @@ button:disabled {
     font-weight: 600;
 }
 
+/* Small floating button used to delete the current avatar. */
 .delete-avatar-btn {
     position: absolute;
     top: 0;
@@ -397,6 +434,7 @@ button:disabled {
     transform: scale(1.1);
 }
 
+/* Helper text under the avatar preview. */
 .avatar-hint {
     margin-top: 8px;
     font-size: 0.75rem;
@@ -405,6 +443,7 @@ button:disabled {
     text-align: center;
 }
 
+/* Stack profile fields with even spacing. */
 .profile-info {
     display: flex;
     flex-direction: column;
@@ -412,6 +451,7 @@ button:disabled {
     margin-bottom: 32px;
 }
 
+/* Label style used for profile info rows. */
 .info-item .label {
     display: block;
     font-size: 0.75rem;
@@ -421,11 +461,13 @@ button:disabled {
     margin-bottom: 8px;
 }
 
+/* Make read-only inputs look inactive. */
 .editable-input:disabled {
     cursor: not-allowed;
     opacity: 0.6;
 }
 
+/* Group save and delete actions in the profile section. */
 .profile-actions {
     display: flex;
     flex-direction: column;
@@ -433,6 +475,7 @@ button:disabled {
 }
 
 /* Toast Notification */
+/* Toast popup for lightweight user feedback messages. */
 .toast {
     position: fixed;
     bottom: 24px;
@@ -463,6 +506,7 @@ button:disabled {
     border-left-color: var(--success);
 }
 
+/* Expand the signup form into two columns on larger screens. */
 @media (min-width: 768px) {
     .container.signup-active {
         max-width: 860px;
@@ -493,6 +537,7 @@ button:disabled {
     }
 }
 
+/* Tighten spacing and stack controls cleanly on small screens. */
 @media (max-width: 640px) {
     body {
         align-items: stretch;

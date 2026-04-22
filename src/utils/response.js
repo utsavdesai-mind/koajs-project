@@ -2,6 +2,7 @@
  * Common response utility for Koa.js
  */
 
+// Build a shared metadata shape so every response stays consistent.
 const createMetadata = (status, extra = {}) => ({
     statusCode: status,
     timestamp: new Date().toISOString(),
@@ -43,6 +44,7 @@ const errorResponse = (
     details = null,
     metadata = null
 ) => {
+    // Collect optional error details before sending the final response body.
     const errorMetadata = { ...(metadata || {}) };
 
     if (error) {

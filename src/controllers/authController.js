@@ -2,17 +2,18 @@ const User = require("../models/User");
 const { generateToken } = require("../utils/jwt");
 const { successResponse, errorResponse } = require("../utils/response");
 
-// Register user
+// Create a new user account after checking that the email is not already in use.
 exports.register = async (ctx) => {
     try {
         const { name, email, password, age } = ctx.request.body;
 
-        // Check if user already exists
+        // Stop registration if another account already uses the same email.
         const userExists = await User.findOne({ email });
         if (userExists) {
             return errorResponse(ctx, "User already exists", 400);
         }
 
+        // Save the new user so the model hook can hash the password automatically.
         const user = new User({ name, email, password, age });
         await user.save();
 
@@ -29,18 +30,19 @@ exports.register = async (ctx) => {
     }
 };
 
-// Login user
+// Authenticate a user and return a JWT for protected requests.
 exports.login = async (ctx) => {
     try {
         const { email, password } = ctx.request.body;
 
+        // Look up the account before verifying the submitted password.
         const user = await User.findOne({ email });
 
         if (!user || !(await user.comparePassword(password))) {
             return errorResponse(ctx, "Invalid email or password", 401);
         }
 
-        // Generate JWT
+        // Generate a signed token containing the user's id.
         const token = generateToken({ id: user._id });
 
         successResponse(ctx, {

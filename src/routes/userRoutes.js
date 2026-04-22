@@ -5,13 +5,15 @@ const validate = require("../middleware/validate");
 const upload = require("../middleware/upload");
 const { updateUserSchema } = require("../validations/userValidation");
 
+// Group protected user endpoints under /users.
 const router = new Router({
   prefix: "/users",
 });
 
-// Protect all user routes
+// Require authentication for every route below this middleware.
 router.use(auth);
 
+// Support reading, updating, deleting, and managing profile images.
 router.get("/:id", userController.getUserById);
 router.put("/:id", validate(updateUserSchema), userController.updateUser);
 router.delete("/:id", userController.deleteUser);

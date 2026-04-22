@@ -3,11 +3,13 @@ const path = require("path");
 const User = require("../../models/User");
 const { successResponse, errorResponse } = require("../../utils/response");
 
+// Build shared metadata so every v2 response includes version information.
 const buildMeta = (ctx) => ({
   version: ctx.state.apiVersion || "v2",
   timestamp: new Date().toISOString(),
 });
 
+// Fetch a single user profile without returning the password hash.
 exports.getUserById = async (ctx) => {
   try {
     const user = await User.findById(ctx.params.id).select("-password");
@@ -30,6 +32,7 @@ exports.getUserById = async (ctx) => {
   }
 };
 
+// Update the selected user profile with validated request data.
 exports.updateUser = async (ctx) => {
   try {
     const user = await User.findById(ctx.params.id);
@@ -38,6 +41,7 @@ exports.updateUser = async (ctx) => {
       return errorResponse(ctx, "User not found", 404);
     }
 
+    // Copy only validated fields onto the loaded user document.
     Object.assign(user, ctx.request.body);
     await user.save();
 
@@ -62,6 +66,7 @@ exports.updateUser = async (ctx) => {
   }
 };
 
+// Delete a user account and clean up the stored profile image file.
 exports.deleteUser = async (ctx) => {
   try {
     const user = await User.findById(ctx.params.id);
@@ -93,6 +98,7 @@ exports.deleteUser = async (ctx) => {
   }
 };
 
+// Upload a replacement profile picture for the current user.
 exports.uploadProfilePicture = async (ctx) => {
   try {
     if (!ctx.file) {
@@ -102,11 +108,13 @@ exports.uploadProfilePicture = async (ctx) => {
     const userId = ctx.params.id || ctx.state.user.id;
     const user = await User.findById(userId);
 
+    // Delete the newly uploaded file if the user cannot be found.
     if (!user) {
       fs.unlinkSync(ctx.file.path);
       return errorResponse(ctx, "User not found", 404);
     }
 
+    // Remove the previous file so only the latest image remains on disk.
     if (user.profilePicture) {
       const oldPath = path.join(__dirname, "../../../", user.profilePicture);
       if (fs.existsSync(oldPath)) {
@@ -137,6 +145,7 @@ exports.uploadProfilePicture = async (ctx) => {
   }
 };
 
+// Delete the currently saved profile picture for the authenticated user.
 exports.deleteProfilePicture = async (ctx) => {
   try {
     const userId = ctx.state.user.id;

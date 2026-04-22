@@ -3,7 +3,7 @@ const { successResponse, errorResponse } = require("../utils/response");
 const fs = require("fs");
 const path = require("path");
 
-// Get user by ID
+// Fetch one user profile while excluding the password hash from the response.
 exports.getUserById = async (ctx) => {
   try {
     const user = await User.findById(ctx.params.id).select("-password");
@@ -19,7 +19,7 @@ exports.getUserById = async (ctx) => {
   }
 };
 
-// Update user
+// Update editable user fields and save the changes.
 exports.updateUser = async (ctx) => {
   try {
     const user = await User.findById(ctx.params.id);
@@ -28,7 +28,7 @@ exports.updateUser = async (ctx) => {
       return errorResponse(ctx, "User not found", 404);
     }
 
-    // Update with validated fields
+    // Copy the already-validated request fields onto the user document.
     Object.assign(user, ctx.request.body);
 
     await user.save();
@@ -47,7 +47,7 @@ exports.updateUser = async (ctx) => {
 };
 
 
-// Delete user
+// Delete a user and remove the stored profile picture from disk if it exists.
 exports.deleteUser = async (ctx) => {
   try {
     const user = await User.findById(ctx.params.id);
@@ -56,7 +56,7 @@ exports.deleteUser = async (ctx) => {
       return errorResponse(ctx, "User not found", 404);
     }
 
-    // Delete profile picture file if it exists
+    // Remove the linked profile picture file before deleting the user record.
     if (user.profilePicture) {
       const filePath = path.join(__dirname, "../../", user.profilePicture);
       if (fs.existsSync(filePath)) {
@@ -72,7 +72,7 @@ exports.deleteUser = async (ctx) => {
   }
 };
 
-// Upload Profile Picture
+// Upload a new profile picture and replace any old one for the user.
 exports.uploadProfilePicture = async (ctx) => {
   try {
     if (!ctx.file) {
@@ -83,12 +83,12 @@ exports.uploadProfilePicture = async (ctx) => {
     const user = await User.findById(userId);
 
     if (!user) {
-      // Cleanup: delete the uploaded file if user not found
+      // Delete the uploaded file immediately if the user record does not exist.
       fs.unlinkSync(ctx.file.path);
       return errorResponse(ctx, "User not found", 404);
     }
 
-    // Delete old profile picture if it exists
+    // Remove the previous image so the user only keeps one profile picture.
     if (user.profilePicture) {
       const oldPath = path.join(__dirname, "../../", user.profilePicture);
       if (fs.existsSync(oldPath)) {
@@ -96,7 +96,7 @@ exports.uploadProfilePicture = async (ctx) => {
       }
     }
 
-    // Save relative path to DB
+    // Store the relative upload path so the frontend can build a public URL.
     user.profilePicture = `uploads/${ctx.file.filename}`;
     await user.save();
 
@@ -113,7 +113,7 @@ exports.uploadProfilePicture = async (ctx) => {
   }
 };
 
-// Delete Profile Picture
+// Delete the current authenticated user's profile picture.
 exports.deleteProfilePicture = async (ctx) => {
   try {
     const userId = ctx.state.user.id;

@@ -1,5 +1,6 @@
 const Joi = require("joi");
 
+// Rules for validating editable user profile fields.
 const updateUserSchema = Joi.object({
     name: Joi.string().min(3).max(30),
     email: Joi.string().email(),

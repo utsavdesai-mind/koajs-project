@@ -2,24 +2,25 @@ const multer = require("@koa/multer");
 const path = require("path");
 const fs = require("fs");
 
-// Ensure uploads directory exists
+// Create the uploads directory before Multer tries to write any files.
 const uploadDir = path.join(__dirname, "../../uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Storage configuration
+// Control where uploaded files are stored and how they are named.
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
+    // Add a timestamp and random value so filenames stay unique.
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
   },
 });
 
-// File filter for images only
+// Accept only supported image formats.
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   if (allowedTypes.includes(file.mimetype)) {
@@ -29,7 +30,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Multer upload middleware
+// Export the configured upload middleware with a 2MB size limit.
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,

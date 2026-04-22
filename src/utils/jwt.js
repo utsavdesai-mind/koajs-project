@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 
+// Read JWT settings from the environment with local fallback values.
 const JWT_SECRET = process.env.JWT_SECRET || "your_super_secret_key";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
 
@@ -21,6 +22,7 @@ const verifyToken = (token) => {
     try {
         return jwt.verify(token, JWT_SECRET);
     } catch (error) {
+        // Convert JWT library errors into one consistent auth message.
         throw new Error("Invalid or expired token");
     }
 };
